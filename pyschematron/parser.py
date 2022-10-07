@@ -7,15 +7,15 @@ __email__ = 'robbert@xkls.nl'
 __licence__ = 'GPL v3'
 
 from abc import ABCMeta
+from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
 from pprint import pprint
-from typing import BinaryIO
+from typing import BinaryIO, Any
 
 from lxml import etree
 
-from elements import Assert
-from pyschematron.schematron import PySchematron
+from elements import Assert, SchematronElement
 
 
 class SchematronParser:
@@ -30,7 +30,7 @@ class SchematronParser:
         """
         self._semantics = semantics
 
-    def parse_from_bytes(self, xml_data: bytes) -> PySchematron:
+    def parse_from_bytes(self, xml_data: bytes) -> SchematronElement:
         """Parse a Schematron XML from a byte string.
 
         Args:
@@ -38,10 +38,13 @@ class SchematronParser:
 
         Returns:
             A Python representation of the Schematron
+
+        Raises:
+            ValueError if no Schematron element could be parsed.
         """
         return self._parse(BytesIO(xml_data))
 
-    def parse_from_string(self, xml_data: str) -> PySchematron:
+    def parse_from_string(self, xml_data: str) -> SchematronElement:
         """Parse a Schematron XML from a string.
 
         Args:
@@ -49,10 +52,13 @@ class SchematronParser:
 
         Returns:
             A Python representation of the Schematron
+
+        Raises:
+            ValueError if no Schematron element could be parsed.
         """
         return self.parse_from_bytes(xml_data.encode('utf-8'))
 
-    def parse_from_file(self, xml_file: Path | BinaryIO) -> PySchematron:
+    def parse_from_file(self, xml_file: Path | BinaryIO) -> SchematronElement:
         """Parse a Schematron XML from a path.
 
         Args:
@@ -60,24 +66,57 @@ class SchematronParser:
 
         Returns:
             A Python representation of the Schematron
+
+        Raises:
+            ValueError if no Schematron element could be parsed.
         """
         if isinstance(xml_file, Path):
             with open(xml_file, 'rb') as f:
                 return self._parse(f)
         return self._parse(xml_file)
 
-    def _parse(self, xml_data):
-        result = None
-        context = etree.iterparse(xml_data, events=('end',))
-        for action, element in context:
+    def _parse(self, xml_data: BinaryIO) -> SchematronElement:
+        """Parse the provided XML data.
+
+        Args:
+            xml_data: the XML data to parse
+
+        Returns:
+            The parsed schematron element, or None if None found.
+
+        Raises:
+            ValueError if no Schematron element could be parsed.
+        """
+        ast = []
+        current_tag = None
+        for action, element in etree.iterparse(xml_data, events=['start', 'end']):
+            if action == 'start':
+                current_tag = element.tag
+
+
             name = etree.QName(element.tag).localname
 
             if hasattr(self._semantics, f'handle_{name}'):
-                semantic_action = getattr(self._semantics, f'handle_{name}')
-                ast = semantic_action([element, ast])
+                action = getattr(self._semantics, f'handle_{name}')
+                ast = action(SchematronAST(element, ast))
+                children.append(ast)
 
             element.clear()
+
+        if not ast:
+            raise ValueError('Could not find any schematron element in the provided data.')
         return ast
+
+
+@dataclass
+class SchematronAST:
+    node: Any
+    children: list[Any]
+    #
+    # def __init__(self, node: Any, children: list[Any]):
+    #     """The constructed AST"""
+    #     self.node = node
+    #     self.children = children
 
 
 class SchematronParserSemantics(metaclass=ABCMeta):
@@ -85,16 +124,15 @@ class SchematronParserSemantics(metaclass=ABCMeta):
     """
 
     def handle_pattern(self, ast):
-        return [etree.QName(ast[0].tag).localname] + ast[1:]
+        return ast
 
     def handle_rule(self, ast):
-        return [etree.QName(ast[0].tag).localname] + ast[1:]
+        return ast
 
     def handle_assert(self, ast):
 
         # Assert.from_xml(ast)
-
-        return [etree.QName(ast[0].tag).localname] + ast[1:]
+        return ast
 
 
 
@@ -130,7 +168,8 @@ test = '''<?xml version="1.0" encoding="UTF-8"?>
 </schema>
 '''
 
-# pprint(parser.parse_from_string(test))
+v = parser.parse_from_string(test)
+pprint(v)
 
 
 

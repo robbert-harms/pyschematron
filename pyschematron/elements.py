@@ -10,8 +10,12 @@ from dataclasses import dataclass
 from lxml import etree
 
 
+class SchematronElement:
+    """Base class for all Schematron elements"""
+
+
 @dataclass(slots=True)
-class Schema:
+class Schema(SchematronElement):
     variables: list[Variable]
     phases: list[Phase]
     patterns: list[Pattern]
@@ -21,7 +25,7 @@ class Schema:
 
 
 @dataclass(slots=True)
-class Assert:
+class Assert(SchematronElement):
     test: str
     message: AssertMessage
     is_report: bool
@@ -29,39 +33,39 @@ class Assert:
 
 
 @dataclass(slots=True)
-class AssertMessage:
+class AssertMessage(SchematronElement):
     message_parts: list[str | etree.Element]
 
 
 @dataclass(slots=True)
-class Namespace:
+class Namespace(SchematronElement):
     prefix: str
     uri: str
 
 
 @dataclass(slots=True)
-class Pattern:
+class Pattern(SchematronElement):
     rules: list[Rule]
     variables: list[Variable]
     id: str | None = None
 
 
 @dataclass(slots=True)
-class Phase:
+class Phase(SchematronElement):
     id: str
     active: list[str]
     variables: list[Variable]
 
 
 @dataclass(slots=True)
-class Rule:
+class Rule(SchematronElement):
     context: str
     asserts: list[Assert]
     variables: list[Variable]
 
 
 @dataclass(slots=True)
-class Variable:
+class Variable(SchematronElement):
     """Stores a variable.
 
     Variables are defined using the element `<let />`.
@@ -71,6 +75,6 @@ class Variable:
 
 
 @dataclass(slots=True)
-class Result:
+class Result(SchematronElement):
     ...
 
