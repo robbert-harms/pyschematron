@@ -11,11 +11,140 @@ from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
 from pprint import pprint
-from typing import BinaryIO, Any
+from typing import BinaryIO, Any, Union
 
+import lxml
 from lxml import etree
 
-from elements import Assert, SchematronElement
+from elements import Assert, SchematronElement, Namespace
+
+
+class SchematronElementParser:
+
+    def __init__(self, subparsers: dict[str, SchematronElementParser]):
+        self.subparsers = subparsers
+
+    def parse(self, xml_data: Union[bytes, str, Path, BytesIO, lxml.etree.iterparse]):
+        match xml_data:
+            case BytesIO():
+                return self.parse(etree.iterparse(xml_data, events=['start', 'end']))
+            case lxml.etree.iterparse():
+                return self.iterparse(xml_data)
+            case bytes():
+                return self.parse(BytesIO(xml_data))
+            case str():
+                return self.parse(BytesIO(xml_data.encode('utf-8')))
+            case Path():
+                with open(xml_data, 'rb') as f:
+                    return self.parse(f)
+
+    def iterparse(self, iterparser):
+        ...
+
+        # if (action, element) := next(iterparser):
+        #     if v[0]
+        #     return self.construct(v[1])
+
+    #
+    #
+    # def parse_from_bytes(self, xml_data: bytes) -> SchematronElement:
+    #     """Parse a Schematron XML from a byte string.
+    #
+    #     Args:
+    #         xml_data: the XML data we want to parse
+    #
+    #     Returns:
+    #         A Python representation of the Schematron
+    #
+    #     Raises:
+    #         ValueError if no Schematron element could be parsed.
+    #     """
+    #     return self._parse(BytesIO(xml_data))
+    #
+    # def parse_from_string(self, xml_data: str) -> SchematronElement:
+    #     """Parse a Schematron XML from a string.
+    #
+    #     Args:
+    #         xml_data: the XML data we want to parse
+    #
+    #     Returns:
+    #         A Python representation of the Schematron
+    #
+    #     Raises:
+    #         ValueError if no Schematron element could be parsed.
+    #     """
+    #     return self.parse_from_bytes(xml_data.encode('utf-8'))
+    #
+    # def parse_from_file(self, xml_file: Path | BinaryIO) -> SchematronElement:
+    #     """Parse a Schematron XML from a path.
+    #
+    #     Args:
+    #         xml_file: either a Path or an open file handle
+    #
+    #     Returns:
+    #         A Python representation of the Schematron
+    #
+    #     Raises:
+    #         ValueError if no Schematron element could be parsed.
+    #     """
+    #     if isinstance(xml_file, Path):
+    #         with open(xml_file, 'rb') as f:
+    #             return self._parse(f)
+    #     return self._parse(xml_file)
+
+
+class SchemaParser(SchematronElementParser):
+
+    def __init__(self):
+        super().__init__({'ns': NamespaceParser(),
+                          'pattern': PatternParser()})
+
+    def iterparse(self, iterparser):
+        namespaces = []
+        patterns = []
+
+        for action, element in iterparser:
+            print('schemaparser', action, element)
+
+            local_name = etree.QName(element.tag).localname
+
+            if local_name == 'ns':
+                namespaces.append(NamespaceParser().parse(iterparser))
+            if local_name == 'pattern':
+                patterns.append(PatternParser().parse(iterparser))
+
+            element.clear()
+
+
+class NamespaceParser(SchematronElementParser):
+
+    def __init__(self):
+        super().__init__({})
+
+    # def construct(self, element):
+    #     print(self.__class__.__name__, element)
+
+    def iterparse(self, iterparser):
+        for action, element in iterparser:
+            print('namespaceparser', action, element)
+            if action == 'end':
+                return Namespace('test', 'test')
+
+
+class PatternParser(SchematronElementParser):
+
+    def __init__(self):
+        super().__init__({})
+
+    # def construct(self, element):
+    #     print(self.__class__.__name__, element)
+
+    def iterparse(self, iterparser):
+        for action, element in iterparser:
+            print('patternparser', action, element)
+            if action == 'end':
+                return Namespace('test', 'test')
+
 
 
 class SchematronParser:
@@ -168,8 +297,20 @@ test = '''<?xml version="1.0" encoding="UTF-8"?>
 </schema>
 '''
 
-v = parser.parse_from_string(test)
-pprint(v)
+# SchemaParser().parse(test)
+
+PatternParser().parse('''
+<pattern>
+    <rule context="//ad:altoida_data/ad:metadata/ad:session/ad:datetime">
+        <assert test="xs:dateTime(@local) = xs:dateTime(@utc)">
+            The local and UTC datetime's do not agree.
+        </assert>
+    </rule>
+</pattern>
+''')
+
+# v = parser.parse_from_string(test)
+# pprint(v)
 
 
 
