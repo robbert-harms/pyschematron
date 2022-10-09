@@ -45,7 +45,7 @@ class Rule(SchematronElement):
 class RuleElement(SchematronElement):
     """Base class for assert and report elements."""
     test: str
-    message: RuleElementMessage
+    message: RuleMessage
     id: str | None = None
 
 
@@ -60,7 +60,7 @@ class Report(RuleElement):
 
 
 @dataclass(slots=True)
-class RuleElementMessage(SchematronElement):
+class RuleMessage(SchematronElement):
     """Representation of the content of a rule element."""
     message_parts: list[str | etree.Element]
 

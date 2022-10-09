@@ -17,6 +17,7 @@ import lxml
 from lxml import etree
 
 from elements import Assert, SchematronElement, Namespace, Variable, Phase, Pattern
+from pyschematron.builders import AssertBuilder
 
 
 class SchematronElementParser:
@@ -94,11 +95,37 @@ class PatternParser(SchematronElementParser):
 
     def iterparse(self, iterparser):
         for action, element in iterparser:
+
+
+
             print('patternparser', action, element)
             if action == 'end':
                 return Namespace('test', 'test')
 
 
+
+class AssertParser(SchematronElementParser):
+
+    def iterparse(self, iterparser):
+        builder = AssertBuilder()
+        message = []
+
+        for action, element in iterparser:
+            local_name = etree.QName(element.tag).localname
+
+            if action == 'start':
+                if local_name == 'assert':
+                    message.append(element.text)
+                else:
+                    message.append(element)
+                    message.append(element.tail)
+            else:
+                print()
+
+            # if action == 'end':
+            # print(action, element)
+            self._iterparser_clear_memory(element)
+        print(message)
 
 class SchematronParser:
 
@@ -252,14 +279,39 @@ test = '''<?xml version="1.0" encoding="UTF-8"?>
 
 # SchemaParser().parse(test)
 
-PatternParser().parse('''
-<pattern>
-    <rule context="//ad:altoida_data/ad:metadata/ad:session/ad:datetime">
-        <assert test="xs:dateTime(@local) = xs:dateTime(@utc)">
-            The local and UTC datetime's do not agree.
-        </assert>
-    </rule>
-</pattern>
+# PatternParser().parse('''
+# <pattern>
+#     <rule context="//ad:altoida_data/ad:metadata/ad:session/ad:datetime">
+#         <assert test="xs:dateTime(@local) = xs:dateTime(@utc)">
+#             The local and UTC datetime's do not agree.
+#         </assert>
+#     </rule>
+# </pattern>
+# ''')
+
+xml_test = '''<?xml version="1.0" encoding="UTF-8"?>
+<notes>
+    <note>
+      <to>Jane</to>
+      <from>John</from>
+      <heading>Test</heading>
+      <body>This is a test</body>
+    </note>
+    <note>
+        <to>John></to>
+        <from>Jane</from>
+        <heading>Test back</heading>
+        <body>This is a test back</body>
+    </note>
+</notes>
+'''
+
+AssertParser().parse('''
+<assert
+    test="//notes"
+    id="unique-id">
+    String with a value: <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards.
+</assert>
 ''')
 
 # v = parser.parse_from_string(test)

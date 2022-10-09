@@ -4,7 +4,7 @@ __maintainer__ = 'Robbert Harms'
 __email__ = 'robbert@xkls.nl'
 __licence__ = 'LGPL v3'
 
-from pyschematron.elements import Variable, Phase, Pattern, Namespace, Schema, RuleElementMessage, Assert
+from pyschematron.elements import Variable, Phase, Pattern, Namespace, Schema, RuleMessage, Assert
 
 
 class SchemaBuilder:
@@ -85,7 +85,7 @@ class AssertBuilder:
 
     def __init__(self):
         self.test: str = None
-        self.message: RuleElementMessage = None
+        self.message: RuleMessage = None
         self.is_report: bool = None
         self.id: str | None = None
 
@@ -108,7 +108,7 @@ class AssertBuilder:
         """
         self.test = test
 
-    def set_message(self, message: RuleElementMessage):
+    def set_message(self, message: RuleMessage):
         """Set the assertion message.
 
         Args:
