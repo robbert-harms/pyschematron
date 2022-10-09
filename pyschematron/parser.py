@@ -14,10 +14,13 @@ from pprint import pprint
 from typing import BinaryIO, Any, Union
 
 import lxml
+from elementpath import Selector
 from lxml import etree
 
 from elements import Assert, SchematronElement, Namespace, Variable, Phase, Pattern
 from pyschematron.builders import AssertBuilder
+
+from elementpath.xpath31 import XPath31Parser
 
 
 class SchematronElementParser:
@@ -106,25 +109,32 @@ class PatternParser(SchematronElementParser):
 
 class AssertParser(SchematronElementParser):
 
+    def __init__(self):
+        self.selectors = {
+            'test': Selector('@test'),
+            'id': Selector('@id'),
+            'message': Selector('./text()|./element()')
+        }
+
     def iterparse(self, iterparser):
         builder = AssertBuilder()
         message = []
 
+        message_selector = Selector('./text()|./element()')
+
         for action, element in iterparser:
             local_name = etree.QName(element.tag).localname
 
-            if action == 'start':
+            if action == 'end':
+
                 if local_name == 'assert':
+                    print(message_selector.select(element))
                     message.append(element.text)
                 else:
                     message.append(element)
                     message.append(element.tail)
-            else:
-                print()
 
-            # if action == 'end':
-            # print(action, element)
-            self._iterparser_clear_memory(element)
+            # self._iterparser_clear_memory(element)
         print(message)
 
 class SchematronParser:
@@ -306,17 +316,19 @@ xml_test = '''<?xml version="1.0" encoding="UTF-8"?>
 </notes>
 '''
 
-AssertParser().parse('''
+assert_str = '''
 <assert
     test="//notes"
     id="unique-id">
     String with a value: <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards.
-</assert>
-''')
+</assert>'''
+AssertParser().parse(assert_str)
 
 # v = parser.parse_from_string(test)
 # pprint(v)
 
 
+
+# query = XPath31Parser().parse('array { (./text()|./element()) }')
 
 
