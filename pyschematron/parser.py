@@ -16,13 +16,10 @@ from typing import BinaryIO, Any, Union
 import lxml
 from lxml import etree
 
-from elements import Assert, SchematronElement, Namespace
+from elements import Assert, SchematronElement, Namespace, Variable, Phase, Pattern
 
 
 class SchematronElementParser:
-
-    def __init__(self, subparsers: dict[str, SchematronElementParser]):
-        self.subparsers = subparsers
 
     def parse(self, xml_data: Union[bytes, str, Path, BytesIO, lxml.etree.iterparse]):
         match xml_data:
@@ -41,79 +38,35 @@ class SchematronElementParser:
     def iterparse(self, iterparser):
         ...
 
-        # if (action, element) := next(iterparser):
-        #     if v[0]
-        #     return self.construct(v[1])
-
-    #
-    #
-    # def parse_from_bytes(self, xml_data: bytes) -> SchematronElement:
-    #     """Parse a Schematron XML from a byte string.
-    #
-    #     Args:
-    #         xml_data: the XML data we want to parse
-    #
-    #     Returns:
-    #         A Python representation of the Schematron
-    #
-    #     Raises:
-    #         ValueError if no Schematron element could be parsed.
-    #     """
-    #     return self._parse(BytesIO(xml_data))
-    #
-    # def parse_from_string(self, xml_data: str) -> SchematronElement:
-    #     """Parse a Schematron XML from a string.
-    #
-    #     Args:
-    #         xml_data: the XML data we want to parse
-    #
-    #     Returns:
-    #         A Python representation of the Schematron
-    #
-    #     Raises:
-    #         ValueError if no Schematron element could be parsed.
-    #     """
-    #     return self.parse_from_bytes(xml_data.encode('utf-8'))
-    #
-    # def parse_from_file(self, xml_file: Path | BinaryIO) -> SchematronElement:
-    #     """Parse a Schematron XML from a path.
-    #
-    #     Args:
-    #         xml_file: either a Path or an open file handle
-    #
-    #     Returns:
-    #         A Python representation of the Schematron
-    #
-    #     Raises:
-    #         ValueError if no Schematron element could be parsed.
-    #     """
-    #     if isinstance(xml_file, Path):
-    #         with open(xml_file, 'rb') as f:
-    #             return self._parse(f)
-    #     return self._parse(xml_file)
+    def _iterparser_clear_memory(self, element):
+        element.clear()
+        # Also eliminate now-empty references from the root node to elem
+        for ancestor in element.xpath('ancestor-or-self::*'):
+            while ancestor.getprevious() is not None:
+                del ancestor.getparent()[0]
 
 
 class SchemaParser(SchematronElementParser):
 
-    def __init__(self):
-        super().__init__({'ns': NamespaceParser(),
-                          'pattern': PatternParser()})
+    def __init__(self, subparsers: dict[str, SchematronElementParser]):
+        self.subparsers = {'ns': NamespaceParser(),
+                           'pattern': PatternParser()}
 
     def iterparse(self, iterparser):
-        namespaces = []
-        patterns = []
-
+        builder = SchemaBuilder()
         for action, element in iterparser:
             print('schemaparser', action, element)
 
             local_name = etree.QName(element.tag).localname
 
-            if local_name == 'ns':
-                namespaces.append(NamespaceParser().parse(iterparser))
-            if local_name == 'pattern':
-                patterns.append(PatternParser().parse(iterparser))
+            match local_name:
+                case 'ns':
+                    namespaces.append(self.subparsers['ns'].parse(iterparser))
+                case 'pattern':
+                    patterns.append(self.subparsers['pattern'].parse(iterparser))
+            self._iterparser_clear_memory()
+        builder.build()
 
-            element.clear()
 
 
 class NamespaceParser(SchematronElementParser):
