@@ -28,7 +28,7 @@ class Schema(SchematronElement):
 
 @dataclass(slots=True)
 class Pattern(SchematronElement):
-    """Representation of the content of a <pattern> tag."""
+    """Representation of a <pattern> tag."""
     rules: list[Rule]
     variables: list[Variable]
     id: str | None = None
@@ -36,7 +36,7 @@ class Pattern(SchematronElement):
 
 @dataclass(slots=True)
 class Rule(SchematronElement):
-    """Representation of the content of a <rule> tag."""
+    """Representation of a <rule> tag."""
     context: str
     rule_elements: list[RuleElement]
     variables: list[Variable] = field(default_factory=list)
@@ -62,20 +62,20 @@ class Report(RuleElement):
 
 @dataclass(slots=True)
 class RuleMessage(SchematronElement):
-    """Representation of the content of a rule element."""
+    """Representation of a rule message element."""
     message_parts: list[str | etree.Element]
 
 
 @dataclass(slots=True)
 class Namespace(SchematronElement):
-    """Representation of the content of an <ns> tag."""
+    """Representation of an <ns> tag."""
     prefix: str
     uri: str
 
 
 @dataclass(slots=True)
 class Phase(SchematronElement):
-    """Representation of the content of a <phase> tag."""
+    """Representation of a <phase> tag."""
     id: str
     active: list[str]
     variables: list[Variable]
@@ -83,7 +83,7 @@ class Phase(SchematronElement):
 
 @dataclass(slots=True)
 class Variable(SchematronElement):
-    """Representation of the content of a <let> tag."""
+    """Representation of a <let> tag."""
     name: str
     value: str
 
