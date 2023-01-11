@@ -6,9 +6,12 @@ __maintainer__ = 'Robbert Harms'
 __email__ = 'robbert@xkls.nl'
 __licence__ = 'LGPL v3'
 
-from lxml import etree
+from abc import ABCMeta, abstractmethod
+from copy import copy
 
-from pyschematron.elements import Variable, Phase, Pattern, Namespace, Schema, RuleMessage, Assert
+from lxml import etree
+from pyschematron.elements import Variable, Phase, Pattern, Namespace, Schema, RuleMessage, Assert, RuleElement, Report, \
+    Rule
 
 
 class SchemaBuilder:
@@ -85,21 +88,59 @@ class SchemaBuilder:
         self.default_phase = default_phase
 
 
-class RuleElementBuilder:
+class RuleBuilder:
 
     def __init__(self):
-        self.test: str
+        """Builder class for building Rule tags."""
+        self.context: str = ''
+        self.rule_elements: list[RuleElement] = []
+        self.variables: list[Variable] = []
+
+    def build(self) -> Rule:
+        """Build the Rule with all the information we have.
+
+        Returns:
+            The build Rule
+        """
+        return Rule(self.context, self.rule_elements, self.variables)
+
+    def set_context(self, context: str):
+        """Set the context attribute.
+
+        Args:
+            context: the context string
+        """
+        self.context = context
+
+    def add_rule_element(self, rule_element: RuleElement):
+        """Add a rule element (assert or report).
+
+        Args:
+            rule_element: the rule element to add
+        """
+        self.rule_elements.append(rule_element)
+
+
+class RuleElementBuilder(metaclass=ABCMeta):
+
+    def __init__(self):
+        """Base class for building rule based elements (assert and report)."""
+        self.test: str = ''
         self.message_parts = []
         self.id: str | None = None
 
-    def build(self) -> Assert:
-        """Build the Schema from all the information we have."""
-        return Assert(self.test, RuleMessage(self.message_parts), self.id)
+    @abstractmethod
+    def build(self) -> RuleElement:
+        """Build the rule element with all the information we have.
+
+        Returns:
+            The specific rule element as dictated by the subclass.
+        """
 
     def clear(self):
         """Clear the content of this builder."""
         self.test = None
-        self.message = []
+        self.message_parts = []
         self.id = None
 
     def set_test(self, test: str):
@@ -120,6 +161,24 @@ class RuleElementBuilder:
         """
         self.message_parts.append(message_part)
 
+    def prepend_message_part(self, message_part: str | etree.Element):
+        """Insert a message part at the beginning of the parts.
+
+        Args:
+            message_part: the message part to put in front of all the others
+        """
+        self.message_parts.insert(0, message_part)
+
+    def set_message_parts(self, message_parts: list[str | etree.Element]):
+        """Set the entire message parts to this data.
+
+        This overwrites the current list.
+
+        Args:
+            message_parts: the message parts which form this rule element.
+        """
+        self.message_parts = copy(message_parts)
+
     def set_id(self, id: str):
         """Set the id of this assertion.
 
@@ -130,8 +189,12 @@ class RuleElementBuilder:
 
 
 class AssertBuilder(RuleElementBuilder):
-    pass
+
+    def build(self) -> Assert:
+        return Assert(self.test, RuleMessage(self.message_parts), self.id)
 
 
 class ReportBuilder(RuleElementBuilder):
-    pass
+
+    def build(self) -> Report:
+        return Report(self.test, RuleMessage(self.message_parts), self.id)
