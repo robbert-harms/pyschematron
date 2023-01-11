@@ -23,6 +23,7 @@ class Schema(SchematronElement):
     namespaces: list[Namespace]
     title: str | None = None
     default_phase: str | None = None
+    query_binding: str | None = None
 
 
 @dataclass(slots=True)

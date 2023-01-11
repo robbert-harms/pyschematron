@@ -1,8 +1,12 @@
+from __future__ import annotations
+
 __author__ = 'Robbert Harms'
 __date__ = '2022-10-09'
 __maintainer__ = 'Robbert Harms'
 __email__ = 'robbert@xkls.nl'
 __licence__ = 'LGPL v3'
+
+from lxml import etree
 
 from pyschematron.elements import Variable, Phase, Pattern, Namespace, Schema, RuleMessage, Assert
 
@@ -81,23 +85,21 @@ class SchemaBuilder:
         self.default_phase = default_phase
 
 
-class AssertBuilder:
+class RuleElementBuilder:
 
     def __init__(self):
-        self.test: str = None
-        self.message: RuleMessage = None
-        self.is_report: bool = None
+        self.test: str
+        self.message_parts = []
         self.id: str | None = None
 
     def build(self) -> Assert:
         """Build the Schema from all the information we have."""
-        return Assert(self.test, self.message, self.is_report, self.id)
+        return Assert(self.test, RuleMessage(self.message_parts), self.id)
 
     def clear(self):
         """Clear the content of this builder."""
         self.test = None
-        self.message = None
-        self.is_report = None
+        self.message = []
         self.id = None
 
     def set_test(self, test: str):
@@ -108,21 +110,15 @@ class AssertBuilder:
         """
         self.test = test
 
-    def set_message(self, message: RuleMessage):
-        """Set the assertion message.
+    def add_message_part(self, message_part: str | etree.Element):
+        """Add a part of the message.
+
+        This allows constructing the message from one or more string and XML elements
 
         Args:
-            message: the assertion message
+             message_part: the message part to append
         """
-        self.message = message
-
-    def set_report_switch(self, is_report: bool):
-        """Set the report switch.
-
-        Args:
-            is_report: if this assertion is part of a report
-        """
-        self.is_report = is_report
+        self.message_parts.append(message_part)
 
     def set_id(self, id: str):
         """Set the id of this assertion.
@@ -131,3 +127,11 @@ class AssertBuilder:
             id: the ID of this assertion
         """
         self.id = id
+
+
+class AssertBuilder(RuleElementBuilder):
+    pass
+
+
+class ReportBuilder(RuleElementBuilder):
+    pass
