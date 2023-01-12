@@ -52,6 +52,20 @@ class ParserFactory(metaclass=ABCMeta):
             A parser for the schematron element we want to construct
         """
 
+    @abstractmethod
+    def get_schematron_element(self, xml_tag: str) -> Type[SchematronElement]:
+        """Get a schematron element type for the indicated tag.
+
+        This should be a mapping of xml tags to Schematron element types, such that the resulting schematron element
+        type can be used in the :meth:`get_parser`.
+
+        Args:
+            xml_tag: the XML tag for which we want the schematron element.
+
+        Returns:
+            The schematron element type we associate with the indicated tag.
+        """
+
 
 class DefaultParserFactory(ParserFactory):
     """The default parser factory.
@@ -66,6 +80,14 @@ class DefaultParserFactory(ParserFactory):
             Report: ReportParser(self),
         }
         return parser_mapping[schematron_element]
+
+    def get_schematron_element(self, xml_tag: str) -> Type[SchematronElement]:
+        mapping: Dict[str, Type[SchematronElement]] = {
+            'rule': Rule,
+            'assert': Assert,
+            'report': Report
+        }
+        return mapping[xml_tag]
 
 
 class SchematronElementParser(metaclass=ABCMeta):
@@ -143,11 +165,9 @@ class RuleParser(BaseSchematronElementParser):
             local_name = etree.QName(element.tag).localname
 
             if action == ITERPARSE_START_TAG:
-                if local_name == 'assert':
-                    sub_parser = self._parser_factory.get_parser(Assert)
-                    builder.add_rule_element(sub_parser.parse(iterparser))
-                elif local_name == 'report':
-                    sub_parser = self._parser_factory.get_parser(Report)
+                if local_name in ['assert', 'report']:
+                    element_type = self._parser_factory.get_schematron_element(local_name)
+                    sub_parser = self._parser_factory.get_parser(element_type)
                     builder.add_rule_element(sub_parser.parse(iterparser))
 
             elif action == ITERPARSE_END_TAG:
@@ -233,18 +253,18 @@ test = '''<?xml version="1.0" encoding="UTF-8"?>
 
 # SchemaParser().parse(test)
 
-# print(RuleParser().parse('''
-#     <rule context="//ad:altoida_data/ad:metadata/ad:session/ad:datetime">
-#         <assert test="xs:dateTime(@local) = xs:dateTime(@utc)">
-#             Start <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards.
-#         </assert>
-#         <report
-#             test="//notes"
-#             id="unique-id">
-#             String with a value: <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards Report.
-#         </report>
-#     </rule>
-# '''))
+print(RuleParser().parse('''
+    <rule context="//ad:altoida_data/ad:metadata/ad:session/ad:datetime">
+        <assert test="xs:dateTime(@local) = xs:dateTime(@utc)">
+            Start <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards.
+        </assert>
+        <report
+            test="//notes"
+            id="unique-id">
+            String with a value: <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards Report.
+        </report>
+    </rule>
+'''))
 
 
 assert_str = '''
@@ -255,19 +275,10 @@ assert_str = '''
 </assert>'''
 print(AssertParser().parse(assert_str))
 
-# report_str = '''
-# <report
-#     test="//notes"
-#     id="unique-id">
-#     String with a value: <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards Report.
-# </report>'''
-# print(ReportParser().parse(report_str))
-
-# v = parser.parse_from_string(test)
-# pprint(v)
-
-
-
-# query = XPath31Parser().parse('array { (./text()|./element()) }')
-
-
+report_str = '''
+<report
+    test="//notes"
+    id="unique-id">
+    String with a value: <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards Report.
+</report>'''
+print(ReportParser().parse(report_str))
