@@ -18,7 +18,7 @@ from elementpath import Selector
 from lxml import etree
 
 from elements import Assert, SchematronElement, Namespace, Variable, Phase, Pattern, Schema, Report, Rule
-from pyschematron.builders import AssertBuilder, RuleElementBuilder, ReportBuilder, RuleBuilder
+from pyschematron.builders import AssertBuilder, TestBuilder, ReportBuilder, RuleBuilder
 
 from elementpath.xpath31 import XPath31Parser
 
@@ -158,10 +158,10 @@ class RuleParser(BaseSchematronElementParser):
         return builder.build()
 
 
-class RuleElementParser(BaseSchematronElementParser):
+class TestParser(BaseSchematronElementParser):
     """Base parser for the Schematron rules Assert and Report.
 
-    To implement, the tag name must be defined and the get_builder method implemented.
+    To implement, the tag name must be defined and the :meth:`get_builder` method implemented.
     """
     tag_name: str = None
 
@@ -185,7 +185,7 @@ class RuleElementParser(BaseSchematronElementParser):
         return builder.build()
 
     @abstractmethod
-    def get_builder(self) -> RuleElementBuilder:
+    def get_builder(self) -> TestBuilder:
         """Get the builder we will use for this parser.
 
         Returns:
@@ -193,17 +193,17 @@ class RuleElementParser(BaseSchematronElementParser):
         """
 
 
-class AssertParser(RuleElementParser):
+class AssertParser(TestParser):
     tag_name: str = 'assert'
 
-    def get_builder(self) -> RuleElementBuilder:
+    def get_builder(self) -> TestBuilder:
         return AssertBuilder()
 
 
-class ReportParser(RuleElementParser):
+class ReportParser(TestParser):
     tag_name: str = 'report'
 
-    def get_builder(self) -> RuleElementBuilder:
+    def get_builder(self) -> TestBuilder:
         return ReportBuilder()
 
 
@@ -233,18 +233,18 @@ test = '''<?xml version="1.0" encoding="UTF-8"?>
 
 # SchemaParser().parse(test)
 
-print(RuleParser().parse('''
-    <rule context="//ad:altoida_data/ad:metadata/ad:session/ad:datetime">
-        <assert test="xs:dateTime(@local) = xs:dateTime(@utc)">
-            Start <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards.
-        </assert>
-        <report
-            test="//notes"
-            id="unique-id">
-            String with a value: <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards Report.
-        </report>
-    </rule>
-'''))
+# print(RuleParser().parse('''
+#     <rule context="//ad:altoida_data/ad:metadata/ad:session/ad:datetime">
+#         <assert test="xs:dateTime(@local) = xs:dateTime(@utc)">
+#             Start <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards.
+#         </assert>
+#         <report
+#             test="//notes"
+#             id="unique-id">
+#             String with a value: <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards Report.
+#         </report>
+#     </rule>
+# '''))
 
 
 assert_str = '''
@@ -255,13 +255,13 @@ assert_str = '''
 </assert>'''
 print(AssertParser().parse(assert_str))
 
-report_str = '''
-<report
-    test="//notes"
-    id="unique-id">
-    String with a value: <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards Report.
-</report>'''
-print(ReportParser().parse(report_str))
+# report_str = '''
+# <report
+#     test="//notes"
+#     id="unique-id">
+#     String with a value: <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards Report.
+# </report>'''
+# print(ReportParser().parse(report_str))
 
 # v = parser.parse_from_string(test)
 # pprint(v)

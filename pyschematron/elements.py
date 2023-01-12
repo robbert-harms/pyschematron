@@ -38,12 +38,12 @@ class Pattern(SchematronElement):
 class Rule(SchematronElement):
     """Representation of the content of a <rule> tag."""
     context: str
-    rule_elements: list[RuleElement]
+    tests: list[Test]
     variables: list[Variable] = field(default_factory=list)
 
 
 @dataclass(slots=True)
-class RuleElement(SchematronElement):
+class Test(SchematronElement):
     """Base class for assert and report elements."""
     test: str
     message: RuleMessage
@@ -51,12 +51,12 @@ class RuleElement(SchematronElement):
 
 
 @dataclass(slots=True)
-class Assert(RuleElement):
+class Assert(Test):
     """Representation of an <assert> tag."""
 
 
 @dataclass(slots=True)
-class Report(RuleElement):
+class Report(Test):
     """Representation of a <report> tag."""
 
 
