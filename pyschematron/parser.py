@@ -17,6 +17,7 @@ from lxml import etree
 from elements import Assert, SchematronElement, Variable, Report, Rule, Pattern
 from pyschematron.builders import AssertBuilder, TestBuilder, ReportBuilder, RuleBuilder, PatternBuilder, \
     VariableBuilder, SchematronElementBuilder
+from pyschematron.xml_writer import JinjaXMLWriter
 
 ITERPARSE_START_TAG = 'start'
 ITERPARSE_END_TAG = 'end'
@@ -371,9 +372,13 @@ report_str = '''
 <report
     test="//notes"
     id="unique-id">
-    String with a value: <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards Report.
+    String with a value: <value-of select="note/to/text()"/>, <p>and</p> something <value-of select="note/to/text()"/> afterwards Report.
 </report>'''
-print(ReportParser().parse(report_str))
+report = ReportParser().parse(report_str)
+print(report)
+
+xml_writer = JinjaXMLWriter()
+print(xml_writer.to_string(report))
 
 
 
