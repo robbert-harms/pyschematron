@@ -7,21 +7,16 @@ __email__ = 'robbert@xkls.nl'
 __licence__ = 'GPL v3'
 
 from abc import ABCMeta, abstractmethod
-from dataclasses import dataclass
-from io import BytesIO
+from io import BytesIO, IOBase
 from pathlib import Path
-from pprint import pprint
-from typing import BinaryIO, Any, Union, Type, Dict, TypeVar
+from typing import BinaryIO, Union, Type, Dict
 
 import lxml
-from elementpath import Selector
 from lxml import etree
 
-from elements import Assert, SchematronElement, Namespace, Variable, Phase, Pattern, Schema, Report, Rule
-from pyschematron.builders import AssertBuilder, TestBuilder, ReportBuilder, RuleBuilder
-
-from elementpath.xpath31 import XPath31Parser
-
+from elements import Assert, SchematronElement, Variable, Report, Rule, Pattern
+from pyschematron.builders import AssertBuilder, TestBuilder, ReportBuilder, RuleBuilder, PatternBuilder, \
+    VariableBuilder, SchematronElementBuilder
 
 ITERPARSE_START_TAG = 'start'
 ITERPARSE_END_TAG = 'end'
@@ -42,7 +37,7 @@ class ParserFactory(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def get_parser(self, schematron_element: Type[SchematronElement]) -> SchematronElementParser:
+    def get_parser(self, schematron_element: Type[SchematronElement]) -> ElementParser:
         """Get the parser for a specific schematron element.
 
         Args:
@@ -73,24 +68,28 @@ class DefaultParserFactory(ParserFactory):
     For each Schematron element, this returns the standard parser from this library.
     """
 
-    def get_parser(self, schematron_element: Type[SchematronElement]) -> SchematronElementParser:
-        parser_mapping: Dict[Type[SchematronElement], SchematronElementParser] = {
+    def get_parser(self, schematron_element: Type[SchematronElement]) -> ElementParser:
+        parser_mapping: Dict[Type[SchematronElement], ElementParser] = {
+            Pattern: PatternParser(self),
             Rule: RuleParser(self),
             Assert: AssertParser(self),
             Report: ReportParser(self),
+            Variable: VariableParser(self)
         }
         return parser_mapping[schematron_element]
 
     def get_schematron_element(self, xml_tag: str) -> Type[SchematronElement]:
         mapping: Dict[str, Type[SchematronElement]] = {
+            'pattern': Pattern,
             'rule': Rule,
             'assert': Assert,
-            'report': Report
+            'report': Report,
+            'let': Variable
         }
         return mapping[xml_tag]
 
 
-class SchematronElementParser(metaclass=ABCMeta):
+class ElementParser(metaclass=ABCMeta):
 
     def __init__(self, parser_factory: ParserFactory = DefaultParserFactory()):
         """Abstract base class for a Schematron element parser.
@@ -110,12 +109,11 @@ class SchematronElementParser(metaclass=ABCMeta):
         """
 
 
-class BaseSchematronElementParser(SchematronElementParser, metaclass=ABCMeta):
+class BaseElementParser(ElementParser, metaclass=ABCMeta):
 
-    # todo BinaryIO?
-    def parse(self, xml_data: Union[bytes, str, Path, BytesIO, lxml.etree.iterparse]) -> SchematronElement:
+    def parse(self, xml_data: Union[bytes, str, Path, IOBase, BinaryIO, lxml.etree.iterparse]) -> SchematronElement:
         match xml_data:
-            case BytesIO():
+            case IOBase():
                 return self.parse(etree.iterparse(xml_data, events=['start', 'end']))
             case lxml.etree.iterparse():
                 return self.iterparse(xml_data)
@@ -139,7 +137,8 @@ class BaseSchematronElementParser(SchematronElementParser, metaclass=ABCMeta):
              iterparser: the iterative parser we can use to load the XML
         """
 
-    def _iterparser_clear_memory(self, element):
+    @staticmethod
+    def _iterparser_clear_memory(element):
         """Helper routine to clear memory of an element used in an iterparser.
 
         This also eliminate now-empty references from the root node to elem.
@@ -147,16 +146,78 @@ class BaseSchematronElementParser(SchematronElementParser, metaclass=ABCMeta):
         Args:
             element: the element we can clear
         """
-        def clean_references():
+        def clear_references():
             for ancestor in element.xpath('ancestor-or-self::*'):
                 while ancestor.getprevious() is not None:
                     del ancestor.getparent()[0]
 
         element.clear()
-        clean_references()
+        clear_references()
 
 
-class RuleParser(BaseSchematronElementParser):
+class SimpleElementParser(BaseElementParser):
+
+    def __init__(self, builder: SchematronElementBuilder, xml_tag: str, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._element_name = xml_tag
+        self._builder = builder
+
+    def iterparse(self, iterparser: lxml.etree.iterparse) -> SchematronElement:
+        self._builder.clear()
+
+        for action, element in iterparser:
+            local_name = etree.QName(element.tag).localname
+
+            if action == ITERPARSE_START_TAG:
+                if local_name != self._element_name:
+                    self._parse_child_start_tag(element, iterparser)
+            elif action == ITERPARSE_END_TAG:
+                self._parse_end_tag(element)
+                self._iterparser_clear_memory(element)
+                break
+
+        return self._builder.build()
+
+    def _parse_child_start_tag(self, element, iterparser):
+        local_name = etree.QName(element.tag).localname
+        element_type = self._parser_factory.get_schematron_element(local_name)
+        sub_parser = self._parser_factory.get_parser(element_type)
+        self._builder.add_child(sub_parser.parse(iterparser))
+
+    def _parse_end_tag(self, element):
+        for name, value in element.attrib.items():
+            self._builder.set_attribute(name, value)
+
+
+class PatternParser(SimpleElementParser):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(PatternBuilder(), 'pattern',  *args, **kwargs)
+
+#
+# class PatternParser(BaseElementParser):
+#
+#     def iterparse(self, iterparser: lxml.etree.iterparse) -> SchematronElement:
+#         builder = PatternBuilder()
+#
+#         for action, element in iterparser:
+#             local_name = etree.QName(element.tag).localname
+#
+#             if action == ITERPARSE_START_TAG:
+#                 if local_name in ['rule', 'let']:
+#                     element_type = self._parser_factory.get_schematron_element(local_name)
+#                     sub_parser = self._parser_factory.get_parser(element_type)
+#                     builder.add_child(sub_parser.parse(iterparser))
+#
+#             elif action == ITERPARSE_END_TAG:
+#                 builder.set_id(element.attrib.get('id'))
+#                 self._iterparser_clear_memory(element)
+#                 break
+#
+#         return builder.build()
+
+
+class RuleParser(BaseElementParser):
 
     def iterparse(self, iterparser: lxml.etree.iterparse) -> SchematronElement:
         builder = RuleBuilder()
@@ -168,7 +229,11 @@ class RuleParser(BaseSchematronElementParser):
                 if local_name in ['assert', 'report']:
                     element_type = self._parser_factory.get_schematron_element(local_name)
                     sub_parser = self._parser_factory.get_parser(element_type)
-                    builder.add_rule_element(sub_parser.parse(iterparser))
+                    builder.add_test(sub_parser.parse(iterparser))
+                elif local_name == 'let':
+                    element_type = self._parser_factory.get_schematron_element(local_name)
+                    sub_parser = self._parser_factory.get_parser(element_type)
+                    builder.add_variable(sub_parser.parse(iterparser))
 
             elif action == ITERPARSE_END_TAG:
                 builder.set_context(element.attrib.get('context'))
@@ -178,7 +243,7 @@ class RuleParser(BaseSchematronElementParser):
         return builder.build()
 
 
-class TestParser(BaseSchematronElementParser):
+class TestParser(BaseElementParser):
     """Base parser for the Schematron rules Assert and Report.
 
     To implement, the tag name must be defined and the :meth:`get_builder` method implemented.
@@ -227,6 +292,27 @@ class ReportParser(TestParser):
         return ReportBuilder()
 
 
+class VariableParser(BaseElementParser):
+
+    def iterparse(self, iterparser: lxml.etree.iterparse) -> SchematronElement:
+        builder = VariableBuilder()
+
+        for action, element in iterparser:
+            local_name = etree.QName(element.tag).localname
+
+            if local_name != 'let':
+                raise ValueError(f'Unknown element {local_name} in parsing.')
+
+            if action == ITERPARSE_END_TAG:
+                builder.set_name(element.attrib.get('name'))
+                builder.set_value(element.attrib.get('value'))
+                self._iterparser_clear_memory(element)
+                break
+
+        return builder.build()
+
+
+
 test = '''<?xml version="1.0" encoding="UTF-8"?>
 <schema xmlns="http://purl.oclc.org/dsdl/schematron" queryBinding="xslt2">
     <ns uri="http://www.altoida.com/XMLSchema/data/2021" prefix="ad"/>
@@ -253,8 +339,13 @@ test = '''<?xml version="1.0" encoding="UTF-8"?>
 
 # SchemaParser().parse(test)
 
-print(RuleParser().parse('''
+# print(PatternParser().parse(Path('/tmp/example.xml')))
+# exit()
+print(PatternParser().parse('''
+<pattern id="test">
+    <let name="animalSpecies" value="ark:species"/>
     <rule context="//ad:altoida_data/ad:metadata/ad:session/ad:datetime">
+        <let name="roat" value="'roat'"/>
         <assert test="xs:dateTime(@local) = xs:dateTime(@utc)">
             Start <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards.
         </assert>
@@ -264,6 +355,7 @@ print(RuleParser().parse('''
             String with a value: <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards Report.
         </report>
     </rule>
+</pattern>
 '''))
 
 
@@ -282,3 +374,23 @@ report_str = '''
     String with a value: <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards Report.
 </report>'''
 print(ReportParser().parse(report_str))
+
+
+
+
+# import elementpath
+# import lxml.etree as etree
+#
+# xml = etree.fromstring('''
+# <html>
+#     <body>
+#         <p>Test</p>
+#     </body>
+# </html>
+# ''')
+#
+# variables = {'node': 'html'}
+#
+# p_node = elementpath.select(xml, '//html/body/p')[0]
+# parent_selector = elementpath.select(xml, '//*[name()=$node]', item=p_node, variables=variables)
+# print(parent_selector)

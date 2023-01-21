@@ -103,12 +103,74 @@ class SchemaBuilder(SchematronElementBuilder):
         self.default_phase = default_phase
 
 
+class PatternBuilder(SchematronElementBuilder):
+
+    def __init__(self):
+        """Builder class for Pattern tags."""
+        self.rules: list[Rule] = []
+        self.variables: list[Variable] = []
+        self.id: str | None = None
+
+    def build(self) -> SchematronElement:
+        return Pattern(self.rules, self.variables, id=self.id)
+
+    def clear(self):
+        self.rules = []
+        self.variables = []
+        self.id = None
+
+    def add_child(self, child_element: Rule | Variable):
+        """Add a child element to this pattern.
+
+        Add a rule or variable element to this pattern. In the XML these are the allowed children nodes.
+
+        Args:
+            child_element: the child element to add.
+        """
+        if isinstance(child_element, Rule):
+            return self.add_rule(child_element)
+        elif isinstance(child_element, Variable):
+            return self.add_variable(child_element)
+        else:
+            raise ValueError(f'Unknown child type {type(child_element)}')
+
+    def set_attribute(self, name: str, value: str):
+        if hasattr(self, name):
+            setattr(self, name, value)
+        else:
+            raise ValueError(f'Could not find the attribute {name}.')
+
+    def add_rule(self, rule: Rule):
+        """Add a rule.
+
+        Args:
+            rule: the rule to add
+        """
+        self.rules.append(rule)
+
+    def add_variable(self, let: Variable):
+        """Add a variable (<let> elements)
+
+        Args:
+            let: the variable to add
+        """
+        self.variables.append(let)
+
+    def set_id(self, id: str | None):
+        """Set the id of this pattern.
+
+        Args:
+            id: the ID of the pattern
+        """
+        self.id = id
+
+
 class RuleBuilder(SchematronElementBuilder):
 
     def __init__(self):
         """Builder class for building Rule tags."""
         self.context: str = ''
-        self.rule_elements: list[Test] = []
+        self.tests: list[Test] = []
         self.variables: list[Variable] = []
 
     def build(self) -> Rule:
@@ -117,11 +179,11 @@ class RuleBuilder(SchematronElementBuilder):
         Returns:
             The build Rule
         """
-        return Rule(self.context, self.rule_elements, self.variables)
+        return Rule(self.context, self.tests, self.variables)
 
     def clear(self):
         self.context = ''
-        self.rule_elements = []
+        self.tests = []
         self.variables = []
 
     def set_context(self, context: str):
@@ -132,13 +194,21 @@ class RuleBuilder(SchematronElementBuilder):
         """
         self.context = context
 
-    def add_rule_element(self, rule_element: Test):
-        """Add a rule element (assert or report).
+    def add_test(self, test: Test):
+        """Add a test (assert or report).
 
         Args:
-            rule_element: the rule element to add
+            test: the test element to add
         """
-        self.rule_elements.append(rule_element)
+        self.tests.append(test)
+
+    def add_variable(self, let: Variable):
+        """Add a variable (<let> elements)
+
+        Args:
+            let: the variable to add
+        """
+        self.variables.append(let)
 
 
 class TestBuilder(SchematronElementBuilder, metaclass=ABCMeta):
@@ -218,3 +288,33 @@ class ReportBuilder(TestBuilder):
 
     def build(self) -> Report:
         return Report(self.test, RuleMessage(self.message_parts), self.id)
+
+
+class VariableBuilder(SchematronElementBuilder):
+
+    def __init__(self):
+        self.name: str = ''
+        self.value: str = ''
+
+    def build(self) -> SchematronElement:
+        return Variable(self.name, self.value)
+
+    def clear(self):
+        self.name = ''
+        self.value = ''
+
+    def set_name(self, name: str):
+        """Set the name of the let element.
+
+        Args:
+            name: the name of the variable
+        """
+        self.name = name
+
+    def set_value(self, value: str):
+        """Set the value expression from th elet element.
+
+        Args:
+            value: the expression of the value
+        """
+        self.value = value
