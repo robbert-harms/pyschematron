@@ -1,5 +1,5 @@
-<report test="{{report.test}}"{{ ' id="' + report.id + '"' if report.id else '' }}>
-{%- with rule_message = report.message %}
-    {% include "rule_message.xml.jinja2" %}
-{% endwith %}
+{% macro render_report(element) %}
+<report {{- render_attributes(element, ['test', 'id']) -}}>
+    {{- element.content -}}
 </report>
+{%- endmacro %}

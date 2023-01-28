@@ -7,7 +7,6 @@ __email__ = 'robbert@xkls.nl'
 __licence__ = 'GPL v3'
 
 from dataclasses import dataclass, field
-from lxml import etree
 
 
 class SchematronElement:
@@ -27,69 +26,82 @@ class Schema(SchematronElement):
 
 
 @dataclass(slots=True)
-class Pattern(SchematronElement):
-    """Representation of a <pattern> tag."""
-    rules: list[Rule]
-    variables: list[Variable]
-    id: str | None = None
-
-
-@dataclass(slots=True)
-class Rule(SchematronElement):
-    """Representation of a <rule> tag."""
-    context: str
-    tests: list[Test]
-    variables: list[Variable] = field(default_factory=list)
-
-
-@dataclass(slots=True)
-class Test(SchematronElement):
-    """Base class for assert and report elements."""
-    test: str
-    message: RuleMessage
-    id: str | None = None
-
-
-@dataclass(slots=True)
-class Assert(Test):
-    """Representation of an <assert> tag."""
-
-
-@dataclass(slots=True)
-class Report(Test):
-    """Representation of a <report> tag."""
-
-
-@dataclass(slots=True)
-class RuleMessage(SchematronElement):
-    """Representation of a rule message element."""
-    message_parts: list[str | etree.Element]
-
-
-@dataclass(slots=True)
 class Namespace(SchematronElement):
-    """Representation of an <ns> tag."""
+    """Representation of an `<ns>` tag."""
     prefix: str
     uri: str
 
 
 @dataclass(slots=True)
 class Phase(SchematronElement):
-    """Representation of a <phase> tag."""
+    """Representation of a `<phase>` tag."""
     id: str
     active: list[str]
     variables: list[Variable]
 
 
+
+
+@dataclass(slots=True)
+class Pattern(SchematronElement):
+    """Representation of a <pattern> tag.
+
+    Note that the order of the rules matters. According to the Schematron definition, each node in an XML shall
+    never be checked for multiple rules in one pattern. In the case of multiple matching rules, only the first matching
+    rule is applied.
+    """
+    rules: list[Rule] = field(default_factory=list)
+    variables: list[Variable] = field(default_factory=list)
+    id: str | None = None
+
+
+@dataclass(slots=True)
+class Rule(SchematronElement):
+    """Representation of a <rule> tag.
+
+    Args:
+        context: the attribute with the rule's context
+        tests: the list of report and assert items in this rule
+        variables: the list of `<let>` variable declarations in this rule
+    """
+    context: str | None = None
+    tests: list[Test] = field(default_factory=list)
+    variables: list[Variable] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class Test(SchematronElement):
+    """Base class for `<assert>` and `<report>` elements.
+
+    Args:
+        test: the attribute with the test condition
+        content: the mixed text content, can contain `<emph>`, `<span>`, `<dir>`,
+            `<value-of>`, and `<name>` as flat text.
+        id: the optional id attribute content
+    """
+    test: str
+    content: str
+    id: str | None = None
+
+
+@dataclass(slots=True)
+class Assert(Test):
+    """Representation of an `<assert>` tag."""
+
+
+@dataclass(slots=True)
+class Report(Test):
+    """Representation of a `<report>` tag."""
+
+
 @dataclass(slots=True)
 class Variable(SchematronElement):
-    """Representation of a <let> tag."""
+    """Representation of a `<let>` tag.
+
+    Args:
+        name: the name attribute
+        value: the value attribute
+    """
     name: str
     value: str
-
-
-@dataclass(slots=True)
-class Result(SchematronElement):
-    # todo
-    ...
 

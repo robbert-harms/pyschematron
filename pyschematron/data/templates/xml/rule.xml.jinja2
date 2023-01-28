@@ -1,0 +1,10 @@
+{% macro render_rule(element) -%}
+<rule {{- render_attributes(element, ['context']) -}}>
+    {% for variable in element.variables %}
+        {{- render_element(variable) }}
+    {% endfor %}
+    {% for test in element.tests %}
+        {{- render_element(test) }}
+    {% endfor %}
+</rule>
+{%- endmacro %}

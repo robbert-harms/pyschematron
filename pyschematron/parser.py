@@ -13,9 +13,10 @@ from typing import BinaryIO, Union, Type, Dict
 
 import lxml
 from lxml import etree
+from xml.etree import ElementTree
 
 from elements import Assert, SchematronElement, Variable, Report, Rule, Pattern
-from pyschematron.builders import AssertBuilder, TestBuilder, ReportBuilder, RuleBuilder, PatternBuilder, \
+from pyschematron.builders import AssertBuilder, ReportBuilder, RuleBuilder, PatternBuilder, \
     VariableBuilder, SchematronElementBuilder
 from pyschematron.xml_writer import JinjaXMLWriter
 
@@ -75,7 +76,7 @@ class DefaultParserFactory(ParserFactory):
             Rule: RuleParser(self),
             Assert: AssertParser(self),
             Report: ReportParser(self),
-            Variable: VariableParser(self)
+            Variable: VariableParser(self),
         }
         return parser_mapping[schematron_element]
 
@@ -85,7 +86,7 @@ class DefaultParserFactory(ParserFactory):
             'rule': Rule,
             'assert': Assert,
             'report': Report,
-            'let': Variable
+            'let': Variable,
         }
         return mapping[xml_tag]
 
@@ -110,7 +111,7 @@ class ElementParser(metaclass=ABCMeta):
         """
 
 
-class BaseElementParser(ElementParser, metaclass=ABCMeta):
+class IterparseElementParser(ElementParser, metaclass=ABCMeta):
 
     def parse(self, xml_data: Union[bytes, str, Path, IOBase, BinaryIO, lxml.etree.iterparse]) -> SchematronElement:
         match xml_data:
@@ -156,12 +157,31 @@ class BaseElementParser(ElementParser, metaclass=ABCMeta):
         clear_references()
 
 
-class SimpleElementParser(BaseElementParser):
+class BasicIterparseElementParser(IterparseElementParser):
 
-    def __init__(self, builder: SchematronElementBuilder, xml_tag: str, *args, **kwargs):
+    def __init__(self,
+                 builder: SchematronElementBuilder,
+                 xml_tag: str,
+                 *args,
+                 complex_text_node: bool = False,
+                 **kwargs):
+        """Basic interpretation of an iterparse element parser.
+
+        This contains the basic logic for traversing and parsing the Schematron file using the iterparser.
+        Building logic is determined by the instance variables provided in the initialization,
+        and by (optionally) overwriting the private helper methods.
+
+        Args:
+             builder: the element builder we use to construct the elements
+             xml_tag: the specific element tag this builder is meant for
+             complex_text_node: if the content of the parsed XML tag should be interpreted as a
+                text node with (possibly) complex content (set to True), or as a tag with regular children tags which
+                need another parser for processing (set to False).
+        """
         super().__init__(*args, **kwargs)
         self._element_name = xml_tag
         self._builder = builder
+        self._complex_text_node = complex_text_node
 
     def iterparse(self, iterparser: lxml.etree.iterparse) -> SchematronElement:
         self._builder.clear()
@@ -173,176 +193,98 @@ class SimpleElementParser(BaseElementParser):
                 if local_name != self._element_name:
                     self._parse_child_start_tag(element, iterparser)
             elif action == ITERPARSE_END_TAG:
-                self._parse_end_tag(element)
-                self._iterparser_clear_memory(element)
-                break
+                if local_name == self._element_name:
+                    self._parse_end_tag(element)
+                    self._iterparser_clear_memory(element)
+                    break
 
         return self._builder.build()
 
-    def _parse_child_start_tag(self, element, iterparser):
-        local_name = etree.QName(element.tag).localname
-        element_type = self._parser_factory.get_schematron_element(local_name)
-        sub_parser = self._parser_factory.get_parser(element_type)
-        self._builder.add_child(sub_parser.parse(iterparser))
+    def _parse_child_start_tag(self, element: etree.Element, iterparser):
+        """Parse the start tag of a child element.
 
-    def _parse_end_tag(self, element):
+        Args:
+            element: the starting part of the child element
+            iterparser: the parser we can forward to next parsers.
+        """
+        if self._complex_text_node:
+            self._builder.add_mixed_content(ElementTree.tostring(element, encoding='unicode'))
+        else:
+            local_name = etree.QName(element.tag).localname
+            element_type = self._parser_factory.get_schematron_element(local_name)
+            sub_parser = self._parser_factory.get_parser(element_type)
+            self._builder.add_child(sub_parser.parse(iterparser))
+
+    def _parse_end_tag(self, element: etree.Element):
+        """Parse the end tag of the element we are meant to parse.
+
+        Args:
+            element: the end tag of the element
+        """
+        if self._complex_text_node:
+            self._builder.set_text(element.text)
+
         for name, value in element.attrib.items():
             self._builder.set_attribute(name, value)
 
 
-class PatternParser(SimpleElementParser):
+class PatternParser(BasicIterparseElementParser):
 
     def __init__(self, *args, **kwargs):
         super().__init__(PatternBuilder(), 'pattern',  *args, **kwargs)
 
-#
-# class PatternParser(BaseElementParser):
-#
-#     def iterparse(self, iterparser: lxml.etree.iterparse) -> SchematronElement:
-#         builder = PatternBuilder()
-#
-#         for action, element in iterparser:
-#             local_name = etree.QName(element.tag).localname
-#
-#             if action == ITERPARSE_START_TAG:
-#                 if local_name in ['rule', 'let']:
-#                     element_type = self._parser_factory.get_schematron_element(local_name)
-#                     sub_parser = self._parser_factory.get_parser(element_type)
-#                     builder.add_child(sub_parser.parse(iterparser))
-#
-#             elif action == ITERPARSE_END_TAG:
-#                 builder.set_id(element.attrib.get('id'))
-#                 self._iterparser_clear_memory(element)
-#                 break
-#
-#         return builder.build()
+
+class RuleParser(BasicIterparseElementParser):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(RuleBuilder(), 'rule',  *args, **kwargs)
 
 
-class RuleParser(BaseElementParser):
+class AssertParser(BasicIterparseElementParser):
 
-    def iterparse(self, iterparser: lxml.etree.iterparse) -> SchematronElement:
-        builder = RuleBuilder()
-
-        for action, element in iterparser:
-            local_name = etree.QName(element.tag).localname
-
-            if action == ITERPARSE_START_TAG:
-                if local_name in ['assert', 'report']:
-                    element_type = self._parser_factory.get_schematron_element(local_name)
-                    sub_parser = self._parser_factory.get_parser(element_type)
-                    builder.add_test(sub_parser.parse(iterparser))
-                elif local_name == 'let':
-                    element_type = self._parser_factory.get_schematron_element(local_name)
-                    sub_parser = self._parser_factory.get_parser(element_type)
-                    builder.add_variable(sub_parser.parse(iterparser))
-
-            elif action == ITERPARSE_END_TAG:
-                builder.set_context(element.attrib.get('context'))
-                self._iterparser_clear_memory(element)
-                break
-
-        return builder.build()
+    def __init__(self, *args, **kwargs):
+        super().__init__(AssertBuilder(), 'assert', *args, complex_text_node=True, **kwargs)
 
 
-class TestParser(BaseElementParser):
-    """Base parser for the Schematron rules Assert and Report.
+class ReportParser(BasicIterparseElementParser):
 
-    To implement, the tag name must be defined and the :meth:`get_builder` method implemented.
-    """
-    tag_name: str = None
-
-    def iterparse(self, iterparser: lxml.etree.iterparse) -> SchematronElement:
-        builder = self.get_builder()
-
-        for action, element in iterparser:
-            local_name = etree.QName(element.tag).localname
-
-            if action == ITERPARSE_END_TAG:
-                if local_name == self.tag_name:
-                    builder.prepend_message_part(element.text)
-                    builder.set_id(element.attrib.get('id'))
-                    builder.set_test(element.attrib.get('test', ''))
-                    self._iterparser_clear_memory(element)
-                    break
-                else:
-                    builder.add_message_part(element)
-                    builder.add_message_part(element.tail)
-
-        return builder.build()
-
-    @abstractmethod
-    def get_builder(self) -> TestBuilder:
-        """Get the builder we will use for this parser.
-
-        Returns:
-            The builder we will use for building this element.
-        """
+    def __init__(self, *args, **kwargs):
+        super().__init__(ReportBuilder(), 'report', *args, complex_text_node=True, **kwargs)
 
 
-class AssertParser(TestParser):
-    tag_name: str = 'assert'
+class VariableParser(BasicIterparseElementParser):
 
-    def get_builder(self) -> TestBuilder:
-        return AssertBuilder()
-
-
-class ReportParser(TestParser):
-    tag_name: str = 'report'
-
-    def get_builder(self) -> TestBuilder:
-        return ReportBuilder()
+    def __init__(self, *args, **kwargs):
+        super().__init__(VariableBuilder(), 'let', *args, **kwargs)
 
 
-class VariableParser(BaseElementParser):
+xml_writer = JinjaXMLWriter()
 
-    def iterparse(self, iterparser: lxml.etree.iterparse) -> SchematronElement:
-        builder = VariableBuilder()
+# test = '''<?xml version="1.0" encoding="UTF-8"?>
+# <schema xmlns="http://purl.oclc.org/dsdl/schematron" queryBinding="xslt2">
+#     <ns uri="http://www.altoida.com/XMLSchema/data/2021" prefix="ad"/>
+#     <ns uri="http://www.w3.org/2001/XMLSchema-instance" prefix="xsi"/>
+#     <pattern>
+#         <rule context="//ad:altoida_data/ad:assessment//*[@start_ts and @end_ts]">
+#             <assert test="number(@end_ts) >= number(@start_ts)">
+#                 Test if the end ts is larger than the start ts.
+#             </assert>
+#             <assert test="number(@end_ts) >= number(@start_ts)">
+#                 Test if the end ts is larger than the start ts.
+#             </assert>
+#         </rule>
+#     </pattern>
+#     <pattern>
+#         <rule context="//ad:altoida_data/ad:metadata/ad:session/ad:datetime">
+#             <assert test="xs:dateTime(@local) = xs:dateTime(@utc)">
+#                 The local and UTC datetime's do not agree.
+#             </assert>
+#         </rule>
+#     </pattern>
+# </schema>
+# '''
 
-        for action, element in iterparser:
-            local_name = etree.QName(element.tag).localname
-
-            if local_name != 'let':
-                raise ValueError(f'Unknown element {local_name} in parsing.')
-
-            if action == ITERPARSE_END_TAG:
-                builder.set_name(element.attrib.get('name'))
-                builder.set_value(element.attrib.get('value'))
-                self._iterparser_clear_memory(element)
-                break
-
-        return builder.build()
-
-
-
-test = '''<?xml version="1.0" encoding="UTF-8"?>
-<schema xmlns="http://purl.oclc.org/dsdl/schematron" queryBinding="xslt2">
-    <ns uri="http://www.altoida.com/XMLSchema/data/2021" prefix="ad"/>
-    <ns uri="http://www.w3.org/2001/XMLSchema-instance" prefix="xsi"/>
-    <pattern>
-        <rule context="//ad:altoida_data/ad:assessment//*[@start_ts and @end_ts]">
-            <assert test="number(@end_ts) >= number(@start_ts)">
-                Test if the end ts is larger than the start ts.
-            </assert>
-            <assert test="number(@end_ts) >= number(@start_ts)">
-                Test if the end ts is larger than the start ts.
-            </assert>
-        </rule>
-    </pattern>
-    <pattern>
-        <rule context="//ad:altoida_data/ad:metadata/ad:session/ad:datetime">
-            <assert test="xs:dateTime(@local) = xs:dateTime(@utc)">
-                The local and UTC datetime's do not agree.
-            </assert>
-        </rule>
-    </pattern>
-</schema>
-'''
-
-# SchemaParser().parse(test)
-
-# print(PatternParser().parse(Path('/tmp/example.xml')))
-# exit()
-print(PatternParser().parse('''
+pattern_str = '''
 <pattern id="test">
     <let name="animalSpecies" value="ark:species"/>
     <rule context="//ad:altoida_data/ad:metadata/ad:session/ad:datetime">
@@ -350,52 +292,65 @@ print(PatternParser().parse('''
         <assert test="xs:dateTime(@local) = xs:dateTime(@utc)">
             Start <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards.
         </assert>
-        <report
-            test="//notes"
-            id="unique-id">
+        <report test="//notes" id="unique-id">
             String with a value: <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards Report.
         </report>
     </rule>
 </pattern>
-'''))
+'''
+pattern_item = PatternParser().parse(pattern_str)
+# print(pattern_item)
+print(xml_writer.to_string(pattern_item))
 
-
-assert_str = '''
-<assert
-    test="//notes"
-    id="unique-id">
-    String with a value: <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards.
-</assert>'''
-print(AssertParser().parse(assert_str))
-
-report_str = '''
-<report
-    test="//notes"
-    id="unique-id">
-    String with a value: <value-of select="note/to/text()"/>, <p>and</p> something <value-of select="note/to/text()"/> afterwards Report.
-</report>'''
-report = ReportParser().parse(report_str)
-print(report)
-
-xml_writer = JinjaXMLWriter()
-print(xml_writer.to_string(report))
-
-
-
-
-# import elementpath
-# import lxml.etree as etree
+# rule_str = '''
+# <rule context="//ad:altoida_data/ad:metadata/ad:session/ad:datetime">
+#     <let name="roat" value="'roat'"/>
+#     <let name="test" value="//test"/>
+#     <assert test="xs:dateTime(@local) = xs:dateTime(@utc)" id="test">
+#         Start <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards.
+#     </assert>
+#     <report test="//notes">
+#         String with a value: <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards Report.
+#     </report>
+# </rule>
+# '''
+# # str = '''
+# # <rule id="inline" abstract="yes">
+# #   <report test="*">Error! Element inside inline.</report>
+# #   <assert test="text">Strange, there's no text inside this inline.</assert>
+# # </rule>
+# # '''
 #
-# xml = etree.fromstring('''
-# <html>
-#     <body>
-#         <p>Test</p>
-#     </body>
-# </html>
-# ''')
+# rule_item = RuleParser().parse(rule_str)
+# # # print(rule_item)
+# print(xml_writer.to_string(rule_item))
 #
-# variables = {'node': 'html'}
 #
-# p_node = elementpath.select(xml, '//html/body/p')[0]
-# parent_selector = elementpath.select(xml, '//*[name()=$node]', item=p_node, variables=variables)
-# print(parent_selector)
+# #
+# # let_str = '''
+# # <let name="roat" value="'roat'"/>
+# # '''
+# # let_item = VariableParser().parse(let_str)
+# # print(let_item)
+# # print(xml_writer.to_string(let_item))
+#
+# assert_str = '''
+# <assert
+#     test="//notes/test"
+#     id="unique-id2">
+#     String with a value: <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards.
+# </assert>'''
+# assert_item = AssertParser().parse(assert_str)
+# # print(assert_item)
+# print(xml_writer.to_string(assert_item))
+#
+# report_str = '''
+# <report
+#     test="//notes"
+#     id="unique-id">
+#     String with <emph>bold text</emph>, a value: <value-of select="note/to/text()"/>,
+#     <dir> reversed stuff</dir> and text at the end.
+# </report>'''
+# report = ReportParser().parse(report_str)
+# # print(report)
+# print(xml_writer.to_string(report))

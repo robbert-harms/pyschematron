@@ -1,0 +1,5 @@
+{% macro render_assert(element) %}
+<assert {{- render_attributes(element, ['test', 'id']) -}}>
+    {{- element.content -}}
+</assert>
+{%- endmacro %}
