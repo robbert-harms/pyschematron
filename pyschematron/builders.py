@@ -154,13 +154,40 @@ class VariableBuilder(SimpleElementBuilder):
         return Variable(self._attributes['name'], self._attributes['value'])
 
 
-class AssertBuilder(SimpleElementBuilder):
+class TestBuilder(SimpleElementBuilder, metaclass=ABCMeta):
 
     def build(self) -> SchematronElement:
-        return Assert(self._attributes['test'], ''.join(self._content), id=self._attributes.get('id'))
+        attributes_to_kwargs = {
+            'id': 'id',
+            'diagnostics': 'diagnostics',
+            'subject': 'subject',
+            'role': 'role',
+            'flag': 'flag',
+            'see': 'see',
+            'fpi': 'fpi',
+            'icon': 'icon'
+        }
+        kwargs = {keyword: self._attributes.get(attr) for attr, keyword in attributes_to_kwargs.items()}
+        return self._build_test(self._attributes['test'], ''.join(self._content), kwargs)
+
+    @abstractmethod
+    def _build_test(self, test: str, content: str, kwargs: dict[str, str]) -> Test:
+        """Build the specific test (assert of report) based on the assembled data.
+
+        Args:
+            test: the test condition
+            content: the content of the node
+            kwargs: dictionary with constructed keyword arguments
+        """
 
 
-class ReportBuilder(SimpleElementBuilder):
+class AssertBuilder(TestBuilder):
 
-    def build(self) -> SchematronElement:
-        return Report(self._attributes['test'], ''.join(self._content), id=self._attributes.get('id'))
+    def _build_test(self, test: str, content: str, kwargs: dict[str, str]) -> Test:
+        return Assert(test, content, **kwargs)
+
+
+class ReportBuilder(TestBuilder):
+
+    def _build_test(self, test: str, content: str, kwargs: dict[str, str]) -> Test:
+        return Report(test, content, **kwargs)

@@ -6,6 +6,7 @@ __maintainer__ = 'Robbert Harms'
 __email__ = 'robbert@xkls.nl'
 __licence__ = 'GPL v3'
 
+import warnings
 from dataclasses import dataclass, field
 
 
@@ -78,10 +79,31 @@ class Test(SchematronElement):
         content: the mixed text content, can contain `<emph>`, `<span>`, `<dir>`,
             `<value-of>`, and `<name>` as flat text.
         id: the optional id attribute content
+        diagnostics: an ID referencing a diagnostic element
+        subject: an xpath string referencing the node to which we assign an error message
+        role: a description of the error message or the rule
+        flag: name of the flag to which this test belongs
+        see: an URI or URL referencing background information
+        fpi: formal public identifier, a system-independent ID of this test
+        icon: reference to a graphic file to be used in the error message
     """
     test: str
     content: str
     id: str | None = None
+    diagnostics: str | None = None
+    subject: str | None = None
+    role: str | None = None
+    flag: str | None = None
+    see: str | None = None
+    fpi: str | None = None
+    icon: str | None = None
+
+    def __post_init__(self):
+        unsupported = ['diagnostics', 'subject', 'role', 'flag', 'see', 'fpi', 'icon']
+        active = [el for el in unsupported if getattr(self, el) is not None]
+        if len(active) > 0:
+            # todo move warnings to processor class
+            warnings.warn(f'The attributes {active} are currently unsupported in processing.')
 
 
 @dataclass(slots=True)
