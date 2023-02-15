@@ -1,0 +1,5 @@
+
+
+- fix the context at the beginning of evaluation, since all the timestamps should be the same
+- use the querybinding argument to determine the parser
+-
