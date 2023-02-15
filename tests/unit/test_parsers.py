@@ -6,8 +6,10 @@ __email__ = 'robbert@altoida.com'
 from abc import ABCMeta, abstractmethod
 from typing import Union
 
-from elements import Report, Assert, Variable, Rule, SchematronElement, Pattern
-from parser import ReportParser, AssertParser, VariableParser, RuleParser, PatternParser
+from pytest_check import check
+
+from pyschematron.elements import Report, Assert, Variable, Rule, SchematronElement, Pattern
+from pyschematron.parser import ReportParser, AssertParser, VariableParser, RuleParser, PatternParser
 
 
 def test_pattern_parser():
@@ -35,7 +37,7 @@ def test_let_parser():
     tester.test_correctness(tester.get_parsed_element())
 
 
-class SchematronElementTester(metaclass=ABCMeta):
+class ParserTester(metaclass=ABCMeta):
 
     @classmethod
     @abstractmethod
@@ -79,7 +81,7 @@ class SchematronElementTester(metaclass=ABCMeta):
         """
 
 
-class PatternTester(SchematronElementTester):
+class PatternTester(ParserTester):
 
     def __init__(self,
                  rules: list["RuleTester"],
@@ -119,7 +121,7 @@ class PatternTester(SchematronElementTester):
             rule.test_correctness(parsed_element.rules[ind])
 
 
-class RuleTester(SchematronElementTester):
+class RuleTester(ParserTester):
 
     def __init__(self,
                  context: str,
@@ -159,62 +161,75 @@ class RuleTester(SchematronElementTester):
             test.test_correctness(parsed_element.tests[ind])
 
 
-class AssertTester(SchematronElementTester):
+class TestTester(ParserTester, metaclass=ABCMeta):
 
     def __init__(self, attributes: dict[str, str], content: str):
         self._attributes = attributes
         self._content = content
 
-    @classmethod
-    def get_default(cls):
-        """Get a default test case"""
-        return cls({'test': '//notes', 'id': 'unique-id'}, '''
-            String with <emph>bold text</emph>, a value: <value-of select="note/to/text()" />,
-            <dir> reversed stuff</dir> and text at the end.
-        ''')
-
-    def get_xml_string(self) -> str:
-        return f'<assert test="{self._attributes["test"]}" id="{self._attributes["id"]}">{self._content}</assert>'
-
-    def get_parsed_element(self):
-        return AssertParser().parse(self.get_xml_string())
-
-    def test_correctness(self, parsed_element: Assert):
-        assert parsed_element.id == self._attributes['id']
-        assert parsed_element.test == self._attributes['test']
-        assert parsed_element.content == self._content
-
-
-class ReportTester(SchematronElementTester):
-
-    def __init__(self, attributes: dict[str, str], content: str):
-        self._attributes = attributes
-        self._content = content
+        self._attributes_to_kwargs = {
+            'id': 'id',
+            'diagnostics': 'diagnostics',
+            'subject': 'subject',
+            'role': 'role',
+            'flag': 'flag',
+            'see': 'see',
+            'fpi': 'fpi',
+            'icon': 'icon'
+        }
 
     @classmethod
     def get_default(cls):
         """Get a default test case"""
-        return cls({'test': '//notes', 'id': 'unique-id'}, '''
+        attributes = {
+            'test': '//root',
+            'id': 'some-id',
+            'diagnostics': 'some-diagnostics',
+            'subject': 'some-subject',
+            'role': 'some-role',
+            'flag': 'some-flag',
+            'see': 'some-see',
+            'fpi': 'some-fpi',
+            'icon': 'some-icon'
+        }
+        return cls(attributes, '''
             String with <emph>bold text</emph>, a value: <value-of select="note/to/text()" />,
             <dir> reversed stuff</dir> and text at the end.
         ''')
 
+    def test_correctness(self, parsed_element: Report):
+        _check_parsed_attributes(parsed_element, self._attributes, self._attributes_to_kwargs)
+        check.equal(parsed_element.content, self._content, "Check node content.")
+
+
+class ReportTester(TestTester):
+
     def get_xml_string(self) -> str:
-        return f'<report test="{self._attributes["test"]}" id="{self._attributes["id"]}">{self._content}</report>'
+        attributes = ' '.join([f'{key}="{val}"' for key, val in self._attributes.items()])
+        return f'<report {attributes}>{self._content}</report>'
 
     def get_parsed_element(self):
         return ReportParser().parse(self.get_xml_string())
 
-    def test_correctness(self, parsed_element: Report):
-        assert parsed_element.id == self._attributes['id']
-        assert parsed_element.test == self._attributes['test']
-        assert parsed_element.content == self._content
+
+class AssertTester(TestTester):
+
+    def get_xml_string(self) -> str:
+        attributes = ' '.join([f'{key}="{val}"' for key, val in self._attributes.items()])
+        return f'<assert {attributes}>{self._content}</assert>'
+
+    def get_parsed_element(self):
+        return AssertParser().parse(self.get_xml_string())
 
 
-class VariableTester(SchematronElementTester):
+class VariableTester(ParserTester):
 
     def __init__(self, attributes: dict[str, str]):
         self._attributes = attributes
+        self._attributes_to_kwargs = {
+            'name': 'name',
+            'value': 'value'
+        }
 
     @classmethod
     def get_default(cls):
@@ -222,11 +237,31 @@ class VariableTester(SchematronElementTester):
         return cls({'name': 'documents', 'value': '//root/documents'})
 
     def get_xml_string(self) -> str:
-        return f'<let name="{self._attributes["name"]}" value="{self._attributes["value"]}" />'
+        attributes = ' '.join([f'{key}="{val}"' for key, val in self._attributes.items()])
+        return f'<let {attributes} />'
 
     def get_parsed_element(self):
         return VariableParser().parse(self.get_xml_string())
 
     def test_correctness(self, parsed_element: Variable):
-        assert parsed_element.name == self._attributes['name']
-        assert parsed_element.value == self._attributes['value']
+        _check_parsed_attributes(parsed_element, self._attributes, self._attributes_to_kwargs)
+
+
+def _check_parsed_attributes(parsed_element: SchematronElement,
+                             attributes: dict[str, str],
+                             attributes_to_class: dict[str, str]) -> None:
+    """Check if all attributes were successfully parsed.
+
+    Args:
+        parsed_element: the parsed and constructed element
+        attributes: the XML attributes we used in the parsed XML string
+        attributes_to_class: a mapping of XML attribute names to class attributes of the parsed Schematron element
+
+    Returns:
+        None, all checking is done in this function
+    """
+    for attr_name, class_val_name in attributes_to_class.items():
+        attr_val = attributes.get(attr_name)
+        class_val = getattr(parsed_element, class_val_name)
+        check.equal(attr_val, class_val, f'Check parsing of XML attribute "{attr_name}" '
+                                         f'to class variable {class_val_name}.')

@@ -289,7 +289,7 @@ pattern_str = '''
     <let name="animalSpecies" value="ark:species"/>
     <rule context="//ad:altoida_data/ad:metadata/ad:session/ad:datetime">
         <let name="roat" value="'roat'"/>
-        <assert test="xs:dateTime(@local) = xs:dateTime(@utc)">
+        <assert test="xs:dateTime(@local) = xs:dateTime(@utc)" see="google.com">
             Start <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards.
         </assert>
         <report test="//notes" id="unique-id">
