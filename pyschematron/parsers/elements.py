@@ -11,6 +11,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
+from elementpath import XPathToken
+
 
 class SchematronNode:
     """Base class for all Schematron AST nodes."""
@@ -43,32 +45,22 @@ class Phase(SchematronNode):
     variables: list[Variable]
 
 
-@dataclass(slots=True, kw_only=True)
+@dataclass(slots=True)
 class Pattern(SchematronNode):
-    """Abstract representation of a <pattern> tag.
+    """Representation of a <pattern> tag.
 
-    This can not be instantiated as is, one needs to load one of the subclasses for concrete or abstract patterns.
-
-    Be reminded that the order of the rules matters. According to the Schematron definition, each node in an XML shall
+    Note that the order of the rules matters. According to the Schematron definition, each node in an XML shall
     never be checked for multiple rules in one pattern. In the case of multiple matching rules, only the first matching
     rule is applied.
     """
-    id: str | None = None
-
-
-@dataclass(slots=True)
-class ConcretePattern(Pattern):
-    """A concrete pattern, this neither extends another pattern or is an abstract pattern"""
     rules: list[Rule] = field(default_factory=list)
     variables: list[Variable] = field(default_factory=list)
+    id: str | None = None
 
 
 @dataclass(slots=True, kw_only=True)
 class Rule(SchematronNode):
-    """Abstract representation of a <rule> tag.
-
-    This can not be instantiated as is, rather instantiate one of the subclasses for concrete, abstract,
-    or external rules.
+    """Representation of a <rule> tag.
 
     Args:
         checks: the list of report and assert items in this rule
@@ -92,7 +84,7 @@ class Rule(SchematronNode):
     icon: str | None = None
     role: str | None = None
     see: str | None = None
-    subject: XPath | None = None
+    subject: XPathToken | None = None
     xml_lang: str | None = None
     xml_space: Literal['default', 'preserve'] | None = None
 
@@ -105,7 +97,7 @@ class ConcreteRule(Rule):
         context: the attribute with the rule's context
         id: the identifier of this test (optional)
     """
-    context: XPath
+    context: XPathToken
     id: str | None = None
 
 
@@ -173,7 +165,7 @@ class Check(SchematronNode):
         xml_lang: the default natural language for this node
         xml_space: defines how whitespace must be handled for this element.
     """
-    test: XPath
+    test: XPathToken
     content: str
     diagnostics: list[str] | None = None
     flag: str | None = None
@@ -183,9 +175,16 @@ class Check(SchematronNode):
     properties: list[str] | None = None
     role: str | None = None
     see: str | None = None
-    subject: XPath | None = None
+    subject: XPathToken | None = None
     xml_lang: str | None = None
     xml_space: Literal['default', 'preserve'] | None = None
+
+    def __post_init__(self):
+        unsupported = ['diagnostics', 'subject', 'role', 'flag', 'see', 'fpi', 'icon']
+        active = [el for el in unsupported if getattr(self, el) is not None]
+        if len(active) > 0:
+            # todo move warnings to processor class
+            warnings.warn(f'The attributes {active} are currently unsupported in processing.')
 
 
 @dataclass(slots=True)
@@ -200,34 +199,14 @@ class Report(Check):
 
 @dataclass(slots=True)
 class Variable(SchematronNode):
-    """Abstract representation of a `<let>` tag.
-
-    Args:
-        name: the name attribute
-    """
-    name: str
-
-
-@dataclass(slots=True)
-class XPathVariable(Variable):
-    """Representation of a `<let>` tag with an XPath value attribute.
+    """Representation of a `<let>` tag.
 
     Args:
         name: the name attribute
         value: the value attribute
     """
-    value: XPath
-
-
-@dataclass(slots=True)
-class XMLVariable(Variable):
-    """Representation of a `<let>` tag with the value loaded from the node's content.
-
-    Args:
-        name: the name attribute
-        value: the content of the `<let>` element.
-    """
-    value: str
+    name: str
+    value: XPathToken
 
 
 @dataclass(slots=True)
@@ -244,9 +223,3 @@ class Paragraph(SchematronNode):
     class_: str | None = None
     icon: str | None = None
     id: str | None = None
-
-
-@dataclass(slots=True)
-class XPath(SchematronNode):
-    """Representation of an XPath for in use in the Schematron AST nodes"""
-    xpath: str

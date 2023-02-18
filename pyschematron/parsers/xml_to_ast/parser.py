@@ -4,36 +4,26 @@ __maintainer__ = 'Robbert Harms'
 __email__ = 'robbert@altoida.com'
 
 import os
-import re
-import warnings
 from abc import ABCMeta, abstractmethod
-from io import BytesIO, IOBase
-from itertools import chain
 from pathlib import Path
 from pprint import pprint
-from typing import BinaryIO, Union, Type, Dict, Any
-from xml.etree import ElementTree
+from typing import Type
 
 import elementpath
-from elementpath import XPathToken, XPath1Parser, XPath2Parser
-from elementpath.tdop import Parser
 
-import lxml
-from elementpath.xpath3 import XPath3Parser
-from elementpath.xpath31 import XPath31Parser
-from lxml import etree, objectify
-from lxml.etree import _ElementTree, _Element
-from ruamel import yaml
+from lxml import etree
+from lxml.etree import _Element
 
 from pyschematron.parsers.ast import Schema, Check, Assert, SchematronNode, Pattern, Rule, Report, Variable, Paragraph, \
-    ConcreteRule, AbstractRule, ExtendsById, Extends, ExtendsExternal, ExternalRule
-from pyschematron.parsers.xml.builders import ConcreteRuleBuilder, ExternalRuleBuilder, AbstractRuleBuilder
-from pyschematron.parsers.xml.utils import node_to_str, resolve_href
+    ConcreteRule, AbstractRule, ExtendsById, Extends, ExtendsExternal, ExternalRule, XPath, XPathVariable, XMLVariable
+from pyschematron.parsers.xml_to_ast.builders import ConcreteRuleBuilder, ExternalRuleBuilder, AbstractRuleBuilder, \
+    ConcretePatternBuilder
+from pyschematron.parsers.xml_to_ast.utils import node_to_str, resolve_href
 from pyschematron.utils import load_xml
 
 
 class ParserFactory(metaclass=ABCMeta):
-    """Create Schematron node parsers for a specific Schematron element class.
+    """Create a parser for parsing a specific XML element into an AST node.
 
     By using a factory method we allow subclassing the :class:`SchematronNode` elements and have a
     dedicated parser for such new subclasses without having to subclass a deep class hierarchy.
@@ -72,7 +62,8 @@ class DefaultParserFactory(ParserFactory):
             'let': VariableParser(),
             'p': ParagraphParser(),
             'extends': ExtendsParser(),
-            'include': IncludeParser()
+            'include': IncludeParser(),
+            'pattern': PatternParser()
         }
 
     def get_parser(self, xml_tag: str) -> "ElementParser":
@@ -81,71 +72,16 @@ class DefaultParserFactory(ParserFactory):
 
 class ParsingContext:
 
-    def __init__(self,
-                 xpath_parser: Parser,
-                 parser_factory: ParserFactory = None,
-                 base_path: Path = None):
-        """Create the parser context we use while parsing the Schematron XML.
+    def __init__(self, parser_factory: ParserFactory = None, base_path: Path = None):
+        """Create the parser context we use while parsing the Schematron XML into the AST.
 
         Args:
-            xpath_parser: the xpath parser we can use during parsing of the Schematron XML
             parser_factory: the factory we use to create sub parsers, defaults to :class:`DefaultParserFactory`.
             base_path: the base path to use for file inclusions, if not provided it is set to the current working
                 directory.
         """
-        self.xpath_parser = xpath_parser
         self.parser_factory = parser_factory or DefaultParserFactory()
         self.base_path = base_path or os.getcwd()
-
-    @classmethod
-    def from_schematron_root(cls, xml: _Element, parser_factory: ParserFactory = None, base_path: Path = None):
-        """Prepares the parsing context from the provided Schematron XML root.
-
-        Args:
-            xml: the Schematron root node, we use this to look up the namespaces and the query binding to
-                create the right xpath parser
-            parser_factory: the factory we can use to create sub parsers, if not provided we use the default parser
-                factory.
-            base_path: base path to use for file inclusions
-        """
-        xpath_parser = cls.get_xpath_parser(xml)
-        return cls(xpath_parser, parser_factory, base_path)
-
-    @staticmethod
-    def get_xpath_parser(xml: _Element) -> Parser:
-        """Determine the Xpath parser from the Schematron root.
-
-        Args:
-            xml: the Schematron XML root node
-
-        Returns:
-            A `elementpath` parser instance
-
-        Raises:
-            ValueError if the query binding is not supported by this library.
-        """
-        xpath_parsers = {
-            'xslt': XPath1Parser,
-            'xslt2': XPath2Parser,
-            'xslt3': XPath31Parser,
-            'xpath': XPath1Parser,
-            'xpath2': XPath2Parser,
-            'xpath3': XPath3Parser,
-            'xpath31': XPath31Parser
-        }
-        query_binding = xml.attrib.get('queryBinding', 'xslt')
-
-        if query_binding not in xpath_parsers:
-            raise ValueError(f'The provided queryBinding {query_binding} is not available in this package.')
-
-        if query_binding.startswith('xslt'):
-            warnings.warn(f'XSLT queryBinding support is limited to xpath expressions only.')
-
-        namespaces = {}
-        for xpath_namespace in elementpath.select(xml, '/schema/ns'):
-            namespaces[xpath_namespace.attrib['prefix']] = xpath_namespace.attrib['uri']
-
-        return xpath_parsers[query_binding](namespaces=namespaces)
 
 
 class ElementParser(metaclass=ABCMeta):
@@ -177,7 +113,7 @@ class ElementParser(metaclass=ABCMeta):
         return items
 
     @staticmethod
-    def get_rich_content(element: _Element, context: ParsingContext) -> list[str | XPathToken]:
+    def get_rich_content(element: _Element) -> list[str | XPath]:
         """Get the rich content of the provided node.
 
         Args:
@@ -185,20 +121,56 @@ class ElementParser(metaclass=ABCMeta):
             context: the parsing context, we use this to parse <value-of> nodes.
 
         Returns:
-            A list of text and XPathToken nodes. All rich content like <emph> and <b> are rendered as string content.
-                Nodes of type <value-of> are converted into XPathTokens.
+            A list of text and XPath nodes. All rich content like <emph> and <b> are rendered as string content.
+                Nodes of type <value-of> are converted into XPath nodes.
         """
         content = [element.text]
 
         for child in element.getchildren():
             if child.tag == '{http://purl.oclc.org/dsdl/schematron}value-of':
-                content.append(context.xpath_parser.parse(child.attrib['select']))
+                content.append(XPath(child.attrib['select']))
                 content.append(child.tail)
             else:
                 content.append(node_to_str(child))
                 content.append(child.tail)
 
         return content
+
+
+class PatternParser(ElementParser):
+    """Parse <pattern> tags."""
+
+    def parse(self, element: _Element, context: ParsingContext) -> Pattern:
+        # is_abstract = element.attrib.get('abstract', 'false') == 'true'
+        # loaded_external = element.attrib.get('context') is None
+        #
+        # if is_abstract:
+        #     builder = AbstractRuleBuilder()
+        # elif loaded_external:
+        #     builder = ExternalRuleBuilder()
+        # else:
+        builder = ConcretePatternBuilder()
+
+        builder.add_attributes(element.attrib)
+        builder.add_rules(self._parse_child_tags(element, context, 'rule'))
+        builder.add_variables(self._parse_child_tags(element, context, 'let'))
+        # builder.add_paragraphs(self._parse_child_tags(element, context, 'p'))
+        # builder.add_extends(self._parse_child_tags(element, context, 'extends'))
+
+        # for include_node in self._parse_child_tags(element, context, 'include'):
+        #     match include_node:
+        #         case Check():
+        #             builder.add_checks([include_node])
+        #         case Variable():
+        #             builder.add_variables([include_node])
+        #         case Paragraph():
+        #             builder.add_paragraphs([include_node])
+        #         case Extends():
+        #             builder.add_extends([include_node])
+
+        return builder.build()
+
+
 
 
 class RuleParser(ElementParser):
@@ -215,7 +187,7 @@ class RuleParser(ElementParser):
         else:
             builder = ConcreteRuleBuilder()
 
-        builder.add_attributes(element.attrib, context.xpath_parser)
+        builder.add_attributes(element.attrib)
         builder.add_checks(self._parse_child_tags(element, context, 'assert'))
         builder.add_checks(self._parse_child_tags(element, context, 'report'))
         builder.add_variables(self._parse_child_tags(element, context, 'let'))
@@ -254,8 +226,20 @@ class VariableParser(ElementParser):
     """Parse <let> tags."""
 
     def parse(self, element: _Element, context: ParsingContext) -> Variable:
-        return Variable(name=element.attrib['name'],
-                        value=context.xpath_parser.parse(element.attrib['value']))
+        if 'value' in element.attrib:
+            return XPathVariable(name=element.attrib['name'], value=XPath(element.attrib['value']))
+
+        content = []
+        if element.text:
+            content.append(element.text)
+
+        for child in element.getchildren():
+            content.append(node_to_str(child, remove_namespaces=False))
+
+            if child.tail:
+                content.append(child.tail)
+
+        return XMLVariable(name=element.attrib['name'], value=''.join(content))
 
 
 class ParagraphParser(ElementParser):
@@ -263,7 +247,7 @@ class ParagraphParser(ElementParser):
 
     def parse(self, element: _Element, context: ParsingContext) -> Paragraph:
         kwargs = {
-            'content': self.get_rich_content(element, context)
+            'content': self.get_rich_content(element)
         }
 
         for string_item in ['icon', 'id']:
@@ -302,8 +286,8 @@ class CheckParser(ElementParser):
 
     def parse(self, element: _Element, context: ParsingContext) -> Check:
         kwargs = {
-            'test': context.xpath_parser.parse(element.attrib['test']),
-            'content': self.get_rich_content(element, context)
+            'test': XPath(element.attrib['test']),
+            'content': self.get_rich_content(element)
         }
 
         if 'diagnostics' in element.attrib:
@@ -313,7 +297,7 @@ class CheckParser(ElementParser):
             kwargs['properties'] = element.attrib['properties'].split(' ')
 
         if 'subject' in element.attrib:
-            kwargs['subject'] = context.xpath_parser.parse(element.attrib['subject'])
+            kwargs['subject'] = XPath(element.attrib['subject'])
 
         for string_item in ['id', 'role', 'flag', 'see', 'fpi', 'icon']:
             if string_item in element.attrib:
@@ -352,6 +336,7 @@ test = '''
         <rule abstract="false" context="t:Document" flag="flagtest" fpi="fpitest" icon="icontest" id="idtest"
                         role="roletest" see="seetest" subject="t:Header" xml:lang="nl" xml:space="preserve">
             <let name="nametest" value="t:Footer" />
+            <let name="open_item"><data xmlns="http://test.nl">test</data></let>
             <p class="classtest">some details</p>
             <assert id="TEST-R001" diagnostics="test1 test2" flag="flagtest" fpi="fpitest" icon="icontest"
                         properties="property1 property2" role="roletest" see="seetest"
@@ -362,8 +347,11 @@ test = '''
             <assert id="TEST-R003"
                     test="t:Date">Document MUST contain date.</assert>
             <extends rule="idtest" />
-            <extends href="../tests/fixtures/extends_example.xml" />
-            <include href="../tests/fixtures/rule_include_example.xml" />
+            <extends href="../../../tests/fixtures/extends_example.xml" />
+            <include href="../../../tests/fixtures/rule_include_example.xml" />
+        </rule>
+        <rule context="lions">
+            <report id="some_report" test="@alpha">Some alpha test</report>
         </rule>
     </pattern>
 </schema>
@@ -371,11 +359,11 @@ test = '''
 
 
 schematron_xml = load_xml(test)
-parsing_context = ParsingContext.from_schematron_root(schematron_xml)
+parsing_context = ParsingContext()
 
 # assert_parser = parsing_context.parser_factory.get_parser('assert')
-assert_parser = RuleParser()
-element = assert_parser.parse(elementpath.select(schematron_xml, '/schema/pattern/rule')[0], parsing_context)
+assert_parser = PatternParser()
+element = assert_parser.parse(elementpath.select(schematron_xml, '/schema/pattern')[0], parsing_context)
 
 pprint(element)
 
