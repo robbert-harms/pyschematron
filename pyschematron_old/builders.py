@@ -8,7 +8,7 @@ __licence__ = 'LGPL v3'
 
 from abc import ABCMeta, abstractmethod
 
-from pyschematron.elements import Variable, Phase, Pattern, Namespace, Schema, Assert, Test, Report, \
+from pyschematron_old.elements import Variable, Phase, Pattern, Namespace, Schema, Assert, Test, Report, \
     Rule, SchematronElement
 
 
@@ -30,6 +30,9 @@ class SchematronElementBuilder(metaclass=ABCMeta):
     @abstractmethod
     def set_attribute(self, name: str, value: str):
         """Set the value of a specific attribute.
+
+        Note that the attributes can contain namespaces such as `xml:lang`.
+        The builders will have to make sure to properly parse these attributes.
 
         Args:
             name: the name of the attribute
@@ -83,7 +86,7 @@ class SchematronElementBuilder(metaclass=ABCMeta):
 class SimpleElementBuilder(SchematronElementBuilder, metaclass=ABCMeta):
 
     def __init__(self):
-        """Simple element builder accepting all kind of elements, checking correctness only when building."""
+        """Simple element builder accepting all kind of elements, processing only when building."""
         self._attributes = {}
         self._content = []
         self._children = []
@@ -157,17 +160,7 @@ class VariableBuilder(SimpleElementBuilder):
 class TestBuilder(SimpleElementBuilder, metaclass=ABCMeta):
 
     def build(self) -> SchematronElement:
-        attributes_to_kwargs = {
-            'id': 'id',
-            'diagnostics': 'diagnostics',
-            'subject': 'subject',
-            'role': 'role',
-            'flag': 'flag',
-            'see': 'see',
-            'fpi': 'fpi',
-            'icon': 'icon'
-        }
-        kwargs = {keyword: self._attributes.get(attr) for attr, keyword in attributes_to_kwargs.items()}
+        kwargs = {keyword: self._attributes.get(attr) for attr, keyword in Test.attributes_to_args.items()}
         return self._build_test(self._attributes['test'], ''.join(self._content), kwargs)
 
     @abstractmethod

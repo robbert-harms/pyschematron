@@ -10,7 +10,7 @@ Tests for `pyschematron` module.
 
 import unittest
 
-import pyschematron
+import pyschematron_old
 
 
 class TestPyschematron(unittest.TestCase):

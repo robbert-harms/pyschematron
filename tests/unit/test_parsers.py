@@ -8,8 +8,8 @@ from typing import Union
 
 from pytest_check import check
 
-from pyschematron.elements import Report, Assert, Variable, Rule, SchematronElement, Pattern
-from pyschematron.parser import ReportParser, AssertParser, VariableParser, RuleParser, PatternParser
+from pyschematron_old.elements import Assert, Variable, Rule, SchematronElement, Pattern, Report, Test
+from pyschematron_old.parser import ReportParser, AssertParser, VariableParser, RuleParser, PatternParser
 
 
 def test_pattern_parser():
@@ -167,38 +167,30 @@ class TestTester(ParserTester, metaclass=ABCMeta):
         self._attributes = attributes
         self._content = content
 
-        self._attributes_to_kwargs = {
-            'id': 'id',
-            'diagnostics': 'diagnostics',
-            'subject': 'subject',
-            'role': 'role',
-            'flag': 'flag',
-            'see': 'see',
-            'fpi': 'fpi',
-            'icon': 'icon'
-        }
-
     @classmethod
     def get_default(cls):
         """Get a default test case"""
         attributes = {
             'test': '//root',
             'id': 'some-id',
-            'diagnostics': 'some-diagnostics',
+            'diagnostics': 'some-diagnostics second-diagnostics',
             'subject': 'some-subject',
             'role': 'some-role',
             'flag': 'some-flag',
             'see': 'some-see',
             'fpi': 'some-fpi',
-            'icon': 'some-icon'
+            'icon': 'some-icon',
+            'properties': 'property1 property2',
+            'xml:lang': 'en',
+            'xml:space': 'preserve'
         }
         return cls(attributes, '''
             String with <emph>bold text</emph>, a value: <value-of select="note/to/text()" />,
             <dir> reversed stuff</dir> and text at the end.
         ''')
 
-    def test_correctness(self, parsed_element: Report):
-        _check_parsed_attributes(parsed_element, self._attributes, self._attributes_to_kwargs)
+    def test_correctness(self, parsed_element: Test):
+        _check_parsed_attributes(parsed_element, self._attributes, Test.attributes_to_args)
         check.equal(parsed_element.content, self._content, "Check node content.")
 
 

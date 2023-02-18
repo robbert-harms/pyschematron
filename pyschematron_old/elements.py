@@ -8,6 +8,7 @@ __licence__ = 'GPL v3'
 
 import warnings
 from dataclasses import dataclass, field
+from typing import ClassVar
 
 
 class SchematronElement:
@@ -78,14 +79,21 @@ class Test(SchematronElement):
         test: the attribute with the test condition
         content: the mixed text content, can contain `<emph>`, `<span>`, `<dir>`,
             `<value-of>`, and `<name>` as flat text.
-        id: the optional id attribute content
-        diagnostics: an ID referencing a diagnostic element
+        id: the identifier of this test
+        diagnostics: whitespace-separated list of IDs referencing a diagnostic elements
         subject: an xpath string referencing the node to which we assign an error message
         role: a description of the error message or the rule
-        flag: name of the flag to which this test belongs
-        see: an URI or URL referencing background information
+        flag: name of the flag to which this test belongs, is set to True when this test is fired
+        see: a URI or URL referencing background information
         fpi: formal public identifier, a system-independent ID of this test
         icon: reference to a graphic file to be used in the error message
+        properties: whitespace-separated list of identifiers of property items
+        xml_lang: the default natural language for this node
+        xml_space: defines how whitespace must be handled for this element.
+
+    Attributes:
+        attributes_to_args: a class variable with a mapping of the XML attributes to the names of the keyword
+            variables in the initialization function.
     """
     test: str
     content: str
@@ -97,6 +105,23 @@ class Test(SchematronElement):
     see: str | None = None
     fpi: str | None = None
     icon: str | None = None
+    properties: str | None = None
+    xml_lang: str | None = None
+    xml_space: str | None = None
+
+    attributes_to_args: ClassVar[dict[str, str]] = {
+        'id': 'id',
+        'diagnostics': 'diagnostics',
+        'subject': 'subject',
+        'role': 'role',
+        'flag': 'flag',
+        'see': 'see',
+        'fpi': 'fpi',
+        'icon': 'icon',
+        'properties': 'properties',
+        'xml:lang': 'xml_lang',
+        'xml:space': 'xml_space'
+    }
 
     def __post_init__(self):
         unsupported = ['diagnostics', 'subject', 'role', 'flag', 'see', 'fpi', 'icon']

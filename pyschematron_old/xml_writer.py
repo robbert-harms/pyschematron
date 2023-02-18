@@ -8,7 +8,7 @@ from typing import Type
 
 import jinja2 as jinja2
 
-from pyschematron.elements import SchematronElement, Report, Assert, Variable, Rule, Pattern
+from pyschematron_old.elements import SchematronElement, Report, Assert, Variable, Rule, Pattern
 
 
 class XMLWriter(metaclass=ABCMeta):

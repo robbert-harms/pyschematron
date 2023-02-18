@@ -15,10 +15,10 @@ import lxml
 from lxml import etree
 from xml.etree import ElementTree
 
-from elements import Assert, SchematronElement, Variable, Report, Rule, Pattern
-from pyschematron.builders import AssertBuilder, ReportBuilder, RuleBuilder, PatternBuilder, \
+from pyschematron_old.elements import Assert, SchematronElement, Variable, Report, Rule, Pattern
+from pyschematron_old.builders import AssertBuilder, ReportBuilder, RuleBuilder, PatternBuilder, \
     VariableBuilder, SchematronElementBuilder
-from pyschematron.xml_writer import JinjaXMLWriter
+from pyschematron_old.xml_writer import JinjaXMLWriter
 
 ITERPARSE_START_TAG = 'start'
 ITERPARSE_END_TAG = 'end'
@@ -225,7 +225,8 @@ class BasicIterparseElementParser(IterparseElementParser):
             self._builder.set_text(element.text)
 
         for name, value in element.attrib.items():
-            self._builder.set_attribute(name, value)
+            xml_name = name.replace('{http://www.w3.org/XML/1998/namespace}', 'xml:')
+            self._builder.set_attribute(xml_name, value)
 
 
 class PatternParser(BasicIterparseElementParser):
@@ -289,7 +290,7 @@ pattern_str = '''
     <let name="animalSpecies" value="ark:species"/>
     <rule context="//ad:altoida_data/ad:metadata/ad:session/ad:datetime">
         <let name="roat" value="'roat'"/>
-        <assert test="xs:dateTime(@local) = xs:dateTime(@utc)" see="google.com">
+        <assert test="xs:dateTime(@local) = xs:dateTime(@utc)" see="google.com" xml:lang="en">
             Start <value-of select="note/to/text()"/>, and something <value-of select="note/to/text()"/> afterwards.
         </assert>
         <report test="//notes" id="unique-id">
