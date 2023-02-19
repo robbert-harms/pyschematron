@@ -4,6 +4,7 @@ __maintainer__ = 'Robbert Harms'
 __email__ = 'robbert@altoida.com'
 
 from pathlib import Path
+from typing import Callable, Any
 
 import lxml
 from lxml import etree
@@ -50,3 +51,28 @@ def resolve_href(href: str, base_path: Path) -> Path:
     if file_path.is_absolute():
         return file_path
     return (base_path / file_path).resolve()
+
+
+def parse_attributes(attributes: dict[str, str],
+                     allowed_attributes: list[str],
+                     attribute_handlers: dict[str: Callable[[str, str], Any]] | None = None) -> dict[str, Any]:
+    """Parse the attributes of the given element.
+
+    By default, it returns all attributes as a string value. By using the attribute handlers it is possible
+    to specify for each attribute how it is to be treated.
+
+    Args:
+        attributes: the attributes we wish to parse
+        allowed_attributes: the set of allowed attributes, we will only parse and return the items in this list
+        attribute_handlers: for each attribute name, a callback taking in the name and attribute value to return
+            a new modified name and attribute value.
+
+    Returns:
+        For each allowed attribute the parsed values.
+    """
+    parsed_attributes = {}
+    for item in allowed_attributes:
+        if item in attributes:
+            handler = attribute_handlers.get(item, lambda k, v: {k: v})
+            parsed_attributes.update(handler(item, attributes[item]))
+    return parsed_attributes

@@ -6,7 +6,6 @@ __maintainer__ = 'Robbert Harms'
 __email__ = 'robbert@xkls.nl'
 __licence__ = 'GPL v3'
 
-import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
@@ -19,18 +18,23 @@ class SchematronNode:
 @dataclass(slots=True)
 class Schema(SchematronNode):
     """Representation of a <schema> tag."""
-    variables: list[Variable]
-    phases: list[Phase]
-    patterns: list[Pattern]
-    namespaces: list[Namespace]
-    title: str | None = None
-    default_phase: str | None = None
-    query_binding: str | None = None
+    # variables: list[Variable]
+    # phases: list[Phase]
+    patterns: list[Pattern] = field(default_factory=list)
+    namespaces: list[Namespace] = field(default_factory=list)
+    title: Title | None = None
+    # default_phase: str | None = None
+    # query_binding: str | None = None
 
 
 @dataclass(slots=True)
 class Namespace(SchematronNode):
-    """Representation of an `<ns>` tag."""
+    """Representation of an `<ns>` tag.
+
+    Args:
+        prefix: the prefix for use in the Schematron and the XPath asserts
+        uri: the namespace's URI
+    """
     prefix: str
     uri: str
 
@@ -52,15 +56,70 @@ class Pattern(SchematronNode):
     Be reminded that the order of the rules matters. According to the Schematron definition, each node in an XML shall
     never be checked for multiple rules in one pattern. In the case of multiple matching rules, only the first matching
     rule is applied.
+
+    Args:
+        id: the identifier of this test
+        fpi: formal public identifier, a system-independent ID of this test
+        icon: reference to a graphic file to be used in the error message
+        see: a URI or URL referencing background information
+        xml_lang: the default natural language for this node
+        xml_space: defines how whitespace must be handled for this element.
     """
+    documents: XPath | None = None
     id: str | None = None
+    fpi: str | None = None
+    icon: str | None = None
+    see: str | None = None
+    xml_lang: str | None = None
+    xml_space: Literal['default', 'preserve'] | None = None
 
 
 @dataclass(slots=True)
 class ConcretePattern(Pattern):
-    """A concrete pattern, this neither extends another pattern or is an abstract pattern"""
+    """A concrete pattern, this neither inherits another pattern, nor is an abstract pattern.
+
+    Args:
+        rules: the list of rules
+        variables: the list of variables
+        title: the title of this pattern
+        paragraphs: the list of paragraphs
+    """
     rules: list[Rule] = field(default_factory=list)
     variables: list[Variable] = field(default_factory=list)
+    paragraphs: list[Paragraph] = field(default_factory=list)
+    title: Title | None = None
+
+
+@dataclass(slots=True)
+class AbstractPattern(Pattern):
+    """An abstract pattern, one with the attribute abstract set to True.
+
+    Within this class, all the items are still loaded as XPath elements, even though some may contain
+    abstract pattern variables. The user of this class must localize these for `InheritedPattern` instances.
+
+    Args:
+        rules: the list of rules
+        variables: the list of variables
+        title: the title of this pattern
+        paragraphs: the list of paragraphs
+    """
+    rules: list[Rule] = field(default_factory=list)
+    variables: list[Variable] = field(default_factory=list)
+    paragraphs: list[Paragraph] = field(default_factory=list)
+    title: Title | None = None
+
+
+@dataclass(slots=True)
+class InstancePattern(Pattern):
+    """A pattern inheriting another pattern, i.e. patterns with the `is-a` attribute set."""
+    params: list[PatternParameter] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class PatternParameter(SchematronNode):
+    """A parameter inside a pattern with the `is-a` attribute set."""
+    name: str
+    value: str
 
 
 @dataclass(slots=True, kw_only=True)
@@ -174,7 +233,7 @@ class Check(SchematronNode):
         xml_space: defines how whitespace must be handled for this element.
     """
     test: XPath
-    content: str
+    content: list[str | ValueOf | Name]
     diagnostics: list[str] | None = None
     flag: str | None = None
     fpi: str | None = None
@@ -235,7 +294,7 @@ class Paragraph(SchematronNode):
     """Representation of a `<p>` tag.
 
     Args:
-        content: the rich content of this paragraph
+        content: the text content of this paragraph
         class_: the class attribute
         icon: the icon attribute
         id: the identifier
@@ -247,6 +306,29 @@ class Paragraph(SchematronNode):
 
 
 @dataclass(slots=True)
+class Title(SchematronNode):
+    """Representation of a `<title>` tag.
+
+    Args:
+        content: the text content of this title
+    """
+    content: str
+
+
+@dataclass(slots=True)
 class XPath(SchematronNode):
     """Representation of an XPath for in use in the Schematron AST nodes"""
     xpath: str
+
+
+@dataclass(slots=True)
+class ValueOf(SchematronNode):
+    """Representation of a `<value-of>` node."""
+    select: XPath
+
+
+@dataclass(slots=True)
+class Name(SchematronNode):
+    """Representation of a `<name>` node."""
+    path: XPath | None = None
+
