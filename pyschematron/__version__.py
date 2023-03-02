@@ -1,8 +1,8 @@
 __author__ = 'Robbert Harms'
 __date__ = '2020-02-04'
 __maintainer__ = 'Robbert Harms'
-__email__ = 'robbert@xkls.nl'
-__licence__ = 'GPL v3'
+__email__ = 'robbert@laltoida.com'
+
 
 from importlib import metadata
 from importlib.metadata import PackageNotFoundError

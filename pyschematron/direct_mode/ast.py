@@ -1,3 +1,9 @@
+"""The abstract syntax tree for representing a Schematron XML file.
+
+Step one of loading a Schematron file is parsing it into the various `SchematronASTNode` instances.
+At this step, `<include>` and `<extend href="">` tags are expanded and the referenced XML files are loaded and included.
+Other referencing, like ID matching is done in a later stage.
+"""
 from __future__ import annotations
 
 __author__ = 'Robbert Harms'
@@ -11,24 +17,57 @@ from pathlib import Path
 from typing import Literal
 
 
-class SchematronNode:
+class SchematronASTNode:
     """Base class for all Schematron AST nodes."""
 
 
-@dataclass(slots=True)
-class Schema(SchematronNode):
-    """Representation of a <schema> tag."""
-    # variables: list[Variable]
-    # phases: list[Phase]
+@dataclass(slots=True, frozen=True)
+class Schema(SchematronASTNode):
+    """Representation of a `<schema>` tag.
+
+    Although the standard only supports one `<diagnostics>` and `<properties>` element, we support multiple.
+
+    Args:
+        patterns: the list of patterns
+        namespaces: the list of namespaces
+        phases: the list of phases
+        diagnostics: the list of diagnostics
+        properties: the list of properties
+        paragraphs: the list of paragraphs
+        variables: the list of variables
+        title: the title of this scheme.
+        default_phase: reference to the default phase of this Schema
+        fpi: formal public identifier, a system-independent ID of this test
+        icon: reference to a graphic file to be used in the error message
+        id: the identifier of this element
+        query_binding: the query binding for this scheme
+        schema_version: an implementation defined version of the user's schema
+        see: a URI or URL referencing background information
+        xml_lang: the default natural language for this node
+        xml_space: defines how whitespace must be handled for this element.
+    """
     patterns: list[Pattern] = field(default_factory=list)
     namespaces: list[Namespace] = field(default_factory=list)
+    phases: list[Phase] = field(default_factory=list)
+    diagnostics: list[Diagnostics] = field(default_factory=list)
+    properties: list[Properties] = field(default_factory=list)
+    paragraphs: list[Paragraph] = field(default_factory=list)
+    variables: list[Variable] = field(default_factory=list)
     title: Title | None = None
-    # default_phase: str | None = None
-    # query_binding: str | None = None
+
+    default_phase: str | None = None
+    fpi: str | None = None
+    icon: str | None = None
+    id: str | None = None
+    query_binding: str | None = None
+    schema_version: str | None = None
+    see: str | None = None
+    xml_lang: str | None = None
+    xml_space: Literal['default', 'preserve'] | None = None
 
 
-@dataclass(slots=True)
-class Namespace(SchematronNode):
+@dataclass(slots=True, frozen=True)
+class Namespace(SchematronASTNode):
     """Representation of an `<ns>` tag.
 
     Args:
@@ -39,16 +78,111 @@ class Namespace(SchematronNode):
     uri: str
 
 
-@dataclass(slots=True)
-class Phase(SchematronNode):
-    """Representation of a `<phase>` tag."""
+@dataclass(slots=True, frozen=True)
+class Phase(SchematronASTNode):
+    """Representation of a `<phase>` tag.
+
+    Phases define sets of patterns. When a phase is marked as active, only patterns within that phase definition are
+    fired.
+
+    Args:
+        id: the identifier of this element
+        active: list of identifiers of active patterns
+        variables: list of variables scoped within this execution
+        paragraphs: documentation paragraphs
+        fpi: formal public identifier, a system-independent ID of this test
+        icon: reference to a graphic file to be used in the error message
+        see: a URI or URL referencing background information
+        xml_lang: the default natural language for this node
+        xml_space: defines how whitespace must be handled for this element.
+    """
     id: str
-    active: list[str]
-    variables: list[Variable]
+    active: list[ActivePhase] = field(default_factory=list)
+    variables: list[Variable] = field(default_factory=list)
+    paragraphs: list[Paragraph] = field(default_factory=list)
+    fpi: str | None = None
+    icon: str | None = None
+    see: str | None = None
+    xml_lang: str | None = None
+    xml_space: Literal['default', 'preserve'] | None = None
 
 
-@dataclass(slots=True, kw_only=True)
-class Pattern(SchematronNode):
+@dataclass(slots=True, frozen=True)
+class ActivePhase(SchematronASTNode):
+    """Representation of a `<active>` tag.
+
+    Args:
+        pattern_id: the ID of the pattern we should fire if this phase is active
+        content: the text content, only used for documentation purposes.
+    """
+    pattern_id: str
+    content: str | None = None
+
+
+@dataclass(slots=True, frozen=True)
+class Diagnostics(SchematronASTNode):
+    """Representation of a `<diagnostics>` tag.
+
+    Args:
+        diagnostics: the list of Diagnostic classes
+    """
+    diagnostics: list[Diagnostic]
+
+
+@dataclass(slots=True, frozen=True)
+class Diagnostic(SchematronASTNode):
+    """Representation of a `<diagnostic>` tag.
+
+    Officially the `<name>` element is not allowed within a diagnostic. We allow it nonetheless.
+
+    Args:
+        content: the rich text content of this diagnostic.
+        id: the identifier of this element
+        fpi: formal public identifier, a system-independent ID of this test
+        icon: reference to a graphic file to be used in the error message
+        role: a description of the error message or the rule
+        see: a URI or URL referencing background information
+        xml_lang: the default natural language for this node
+        xml_space: defines how whitespace must be handled for this element.
+    """
+    content: list[str | ValueOf | Name]
+    id: str
+    fpi: str | None = None
+    icon: str | None = None
+    role: str | None = None
+    see: str | None = None
+    xml_lang: str | None = None
+    xml_space: Literal['default', 'preserve'] | None = None
+
+
+@dataclass(slots=True, frozen=True)
+class Properties(SchematronASTNode):
+    """Representation of a `<properties>` tag.
+
+    Args:
+        properties: the list of Property classes
+    """
+    properties: list[Property]
+
+
+@dataclass(slots=True, frozen=True)
+class Property(SchematronASTNode):
+    """Representation of a `<property>` tag.
+
+    Args:
+        content: the rich text content of this property.
+        id: the identifier of this element
+        role: a description of the error message or the rule
+        scheme: An IRI or public identifier specifying the notation used for the node's value.
+    """
+    content: list[str | ValueOf | Name]
+    id: str
+    role: str | None = None
+    scheme: str | None = None
+
+
+@dataclass(slots=True, kw_only=True, frozen=True)
+class Pattern(SchematronASTNode):
     """Abstract representation of a <pattern> tag.
 
     This can not be instantiated as is, one needs to load one of the subclasses for concrete or abstract patterns.
@@ -74,7 +208,7 @@ class Pattern(SchematronNode):
     xml_space: Literal['default', 'preserve'] | None = None
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class ConcretePattern(Pattern):
     """A concrete pattern, this neither inherits another pattern, nor is an abstract pattern.
 
@@ -90,7 +224,7 @@ class ConcretePattern(Pattern):
     title: Title | None = None
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class AbstractPattern(Pattern):
     """An abstract pattern, one with the attribute abstract set to True.
 
@@ -109,21 +243,30 @@ class AbstractPattern(Pattern):
     title: Title | None = None
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class InstancePattern(Pattern):
-    """A pattern inheriting another pattern, i.e. patterns with the `is-a` attribute set."""
+    """A pattern inheriting another pattern, i.e. patterns with the `is-a` attribute set.
+
+    Args:
+        params: the list of pattern parameters
+    """
     params: list[PatternParameter] = field(default_factory=list)
 
 
-@dataclass(slots=True)
-class PatternParameter(SchematronNode):
-    """A parameter inside a pattern with the `is-a` attribute set."""
+@dataclass(slots=True, frozen=True)
+class PatternParameter(SchematronASTNode):
+    """A parameter inside a pattern with the `is-a` attribute set.
+
+    Args:
+        name: the name of this parameter
+        value: the value of this parameter
+    """
     name: str
     value: str
 
 
-@dataclass(slots=True, kw_only=True)
-class Rule(SchematronNode):
+@dataclass(slots=True, kw_only=True, frozen=True)
+class Rule(SchematronASTNode):
     """Abstract representation of a <rule> tag.
 
     This can not be instantiated as is, rather instantiate one of the subclasses for concrete, abstract,
@@ -156,7 +299,7 @@ class Rule(SchematronNode):
     xml_space: Literal['default', 'preserve'] | None = None
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class ConcreteRule(Rule):
     """Representation of a concrete <rule> tag (e.g. not abstract).
 
@@ -168,7 +311,7 @@ class ConcreteRule(Rule):
     id: str | None = None
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class AbstractRule(Rule):
     """Representation of an abstract <rule> tag.
 
@@ -178,18 +321,18 @@ class AbstractRule(Rule):
     id: str
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class ExternalRule(Rule):
     """Representation of an <rule> loaded from an external file using extends."""
     id: str | None = None
 
 
-@dataclass(slots=True)
-class Extends(SchematronNode):
+@dataclass(slots=True, frozen=True)
+class Extends(SchematronASTNode):
     """Base class for <extends> tag representations used to extend a Rule with another rule."""
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class ExtendsById(Extends):
     """Represents an <extends> tag which points to an abstract rule in this Schema.
 
@@ -199,7 +342,7 @@ class ExtendsById(Extends):
     id_pointer: str
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class ExtendsExternal(Extends):
     """Represents an <extends> tag which has an AbstractRule loaded from another file.
 
@@ -211,8 +354,8 @@ class ExtendsExternal(Extends):
     file_path: Path
 
 
-@dataclass(slots=True)
-class Check(SchematronNode):
+@dataclass(slots=True, frozen=True)
+class Check(SchematronASTNode):
     """Base class for `<assert>` and `<report>` elements.
 
     Args:
@@ -247,19 +390,23 @@ class Check(SchematronNode):
     xml_space: Literal['default', 'preserve'] | None = None
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class Assert(Check):
     """Representation of an `<assert>` tag."""
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class Report(Check):
     """Representation of a `<report>` tag."""
 
 
-@dataclass(slots=True)
-class Variable(SchematronNode):
+@dataclass(slots=True, frozen=True)
+class Variable(SchematronASTNode):
     """Abstract representation of a `<let>` tag.
+
+    Let tags can be defined in two ways, one like `<let name="..." value="..."/>` and another like
+    `<let name="..."><some-xml xmlns="...">...</some-xml></let>`. That is, in the second case the value of the
+    variable is a separate XML tree.
 
     Args:
         name: the name attribute
@@ -267,7 +414,7 @@ class Variable(SchematronNode):
     name: str
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class XPathVariable(Variable):
     """Representation of a `<let>` tag with an XPath value attribute.
 
@@ -278,9 +425,12 @@ class XPathVariable(Variable):
     value: XPath
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class XMLVariable(Variable):
     """Representation of a `<let>` tag with the value loaded from the node's content.
+
+    In this case the `<let>` looks like: `<let name="..."><some-xml xmlns="...">...</some-xml></let>` and the
+    value would be `<some-xml xmlns="...">...</some-xml>`, i.e. some XML in some namespace not Schematron's.
 
     Args:
         name: the name attribute
@@ -289,8 +439,8 @@ class XMLVariable(Variable):
     value: str
 
 
-@dataclass(slots=True)
-class Paragraph(SchematronNode):
+@dataclass(slots=True, frozen=True)
+class Paragraph(SchematronASTNode):
     """Representation of a `<p>` tag.
 
     Args:
@@ -305,8 +455,8 @@ class Paragraph(SchematronNode):
     id: str | None = None
 
 
-@dataclass(slots=True)
-class Title(SchematronNode):
+@dataclass(slots=True, frozen=True)
+class Title(SchematronASTNode):
     """Representation of a `<title>` tag.
 
     Args:
@@ -315,20 +465,20 @@ class Title(SchematronNode):
     content: str
 
 
-@dataclass(slots=True)
-class XPath(SchematronNode):
+@dataclass(slots=True, frozen=True)
+class XPath(SchematronASTNode):
     """Representation of an XPath for in use in the Schematron AST nodes"""
     xpath: str
 
 
-@dataclass(slots=True)
-class ValueOf(SchematronNode):
+@dataclass(slots=True, frozen=True)
+class ValueOf(SchematronASTNode):
     """Representation of a `<value-of>` node."""
     select: XPath
 
 
-@dataclass(slots=True)
-class Name(SchematronNode):
+@dataclass(slots=True, frozen=True)
+class Name(SchematronASTNode):
     """Representation of a `<name>` node."""
     path: XPath | None = None
 

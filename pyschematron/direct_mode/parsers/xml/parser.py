@@ -6,7 +6,6 @@ __email__ = 'robbert@altoida.com'
 import os
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
-from pprint import pprint
 from typing import Type
 
 import elementpath
@@ -14,19 +13,20 @@ import elementpath
 from lxml import etree
 from lxml.etree import _Element
 
-from pyschematron.parsers.ast import Schema, Check, Assert, SchematronNode, Pattern, Rule, Report, Variable, Paragraph, \
-    ConcreteRule, AbstractRule, ExtendsById, Extends, ExtendsExternal, ExternalRule, XPath, XPathVariable, XMLVariable, \
-    Namespace, Title, PatternParameter, ValueOf, Name
-from pyschematron.parsers.xml.builders import ConcreteRuleBuilder, ExternalRuleBuilder, AbstractRuleBuilder, \
-    ConcretePatternBuilder, SchemaBuilder, AbstractPatternBuilder, InstancePatternBuilder
-from pyschematron.parsers.xml.utils import node_to_str, resolve_href, parse_attributes
+from pyschematron.direct_mode.ast import Schema, Check, Assert, SchematronASTNode, Pattern, Rule, Report, Variable, \
+    Paragraph, ExtendsById, Extends, ExtendsExternal, ExternalRule, XPath, XPathVariable, XMLVariable, \
+    Namespace, Title, PatternParameter, ValueOf, Name, Phase, ActivePhase, Diagnostic, Diagnostics, Properties, Property
+from pyschematron.direct_mode.parsers.xml.builders import ConcreteRuleBuilder, ExternalRuleBuilder, \
+    AbstractRuleBuilder, ConcretePatternBuilder, SchemaBuilder, AbstractPatternBuilder, \
+    InstancePatternBuilder, PhaseBuilder
+from pyschematron.direct_mode.parsers.xml.utils import node_to_str, resolve_href, parse_attributes
 from pyschematron.utils import load_xml
 
 
 class ParserFactory(metaclass=ABCMeta):
     """Create a parser for parsing a specific XML element into an AST node.
 
-    By using a factory method we allow subclassing the :class:`SchematronNode` elements and have a
+    By using a factory method we allow subclassing the :class:`SchematronASTNode` elements and have a
     dedicated parser for such new subclasses without having to subclass a deep class hierarchy.
 
     For example, suppose you subclass the element "Assert" as "MyAssert" with some additional attributes.
@@ -57,18 +57,26 @@ class DefaultParserFactory(ParserFactory):
 
     def __init__(self):
         self.parsers = {
-            'assert': AssertParser(),
-            'report': ReportParser(),
-            'rule': RuleParser(),
-            'let': VariableParser(),
-            'p': ParagraphParser(),
-            'extends': ExtendsParser(),
-            'include': IncludeParser(),
-            'pattern': PatternParser(),
             'schema': SchemaParser(),
             'ns': NamespaceParser(),
+            'phase': PhaseParser(),
+            'active': ActivePhaseParser(),
+            'pattern': PatternParser(),
+            'rule': RuleParser(),
+            'assert': AssertParser(),
+            'report': ReportParser(),
+            'extends': ExtendsParser(),
+            'param': PatternParameterParser(),
+            'diagnostics': DiagnosticsParser(),
+            'diagnostic': DiagnosticParser(),
+            'properties': PropertiesParser(),
+            'property': PropertyParser(),
+            'name': NameParser(),
+            'value-of': ValueOfParser(),
+            'let': VariableParser(),
+            'p': ParagraphParser(),
             'title': TitleParser(),
-            'param': PatternParameterParser()
+            'include': IncludeParser(),
         }
 
     def get_parser(self, xml_tag: str) -> "ElementParser":
@@ -92,8 +100,8 @@ class ParsingContext:
 class ElementParser(metaclass=ABCMeta):
 
     @abstractmethod
-    def parse(self, element: _Element, context: ParsingContext) -> SchematronNode:
-        """Parse a piece of XML data into a SchematronNode.
+    def parse(self, element: _Element, context: ParsingContext) -> SchematronASTNode:
+        """Parse a piece of XML data into a SchematronASTNode.
 
         Args:
             element: the Schematron XML element we want to parse
@@ -101,7 +109,7 @@ class ElementParser(metaclass=ABCMeta):
         """
 
     @staticmethod
-    def _parse_child_tags(element: _Element, context: ParsingContext, xml_tag: str) -> list[SchematronNode]:
+    def _parse_child_tags(element: _Element, context: ParsingContext, xml_tag: str) -> list[SchematronASTNode]:
         """Parse a sequence of XML elements with the same tag name.
 
         Args:
@@ -118,11 +126,14 @@ class ElementParser(metaclass=ABCMeta):
         return items
 
     @staticmethod
-    def get_rich_content(element: _Element, parse_special: bool = True) -> list[str | ValueOf | Name]:
+    def get_rich_content(element: _Element,
+                         context: ParsingContext,
+                         parse_special: bool = True) -> list[str | ValueOf | Name]:
         """Get the rich content of the provided node.
 
         Args:
             element: the element for which to get the content.
+            context: the parsing context
             parse_special: if set to True, we separate the strings and the special variables (ValueOf, Name).
                 If set to false we return only string contents.
 
@@ -134,12 +145,11 @@ class ElementParser(metaclass=ABCMeta):
 
         for child in element.getchildren():
             if parse_special and child.tag == '{http://purl.oclc.org/dsdl/schematron}value-of':
-                content.append(ValueOf(XPath(child.attrib['select'])))
+                parser = context.parser_factory.get_parser('value-of')
+                content.append(parser.parse(child, context))
             elif parse_special and child.tag == '{http://purl.oclc.org/dsdl/schematron}name':
-                if child.attrib.get('path'):
-                    content.append(Name(XPath(child.attrib['path'])))
-                else:
-                    content.append(Name())
+                parser = context.parser_factory.get_parser('name')
+                content.append(parser.parse(child, context))
             else:
                 content.append(node_to_str(child))
             content.append(child.tail)
@@ -150,28 +160,156 @@ class ElementParser(metaclass=ABCMeta):
 class SchemaParser(ElementParser):
     """Parse <schema> root tags"""
 
-    def parse(self, element: _Element, context: ParsingContext) -> SchematronNode:
+    def parse(self, element: _Element, context: ParsingContext) -> Schema:
         builder = SchemaBuilder()
         builder.add_attributes(element.attrib)
         builder.add_patterns(self._parse_child_tags(element, context, 'pattern'))
         builder.add_namespaces(self._parse_child_tags(element, context, 'ns'))
+        builder.add_phases(self._parse_child_tags(element, context, 'phase'))
+        builder.add_diagnostics(self._parse_child_tags(element, context, 'diagnostics'))
+        builder.add_properties(self._parse_child_tags(element, context, 'properties'))
+        builder.add_paragraphs(self._parse_child_tags(element, context, 'p'))
+        builder.add_variables(self._parse_child_tags(element, context, 'let'))
 
         if title_nodes := self._parse_child_tags(element, context, 'title'):
             builder.set_title(title_nodes[0])
+
+        for include_node in self._parse_child_tags(element, context, 'include'):
+            match include_node:
+                case Pattern():
+                    builder.add_patterns([include_node])
+                case Namespace():
+                    builder.add_namespaces([include_node])
+                case Phase():
+                    builder.add_namespaces([include_node])
+                case Diagnostics():
+                    builder.add_diagnostics([include_node])
+                case Properties():
+                    builder.add_properties([include_node])
+                case Paragraph():
+                    builder.add_paragraphs([include_node])
+                case Variable():
+                    builder.add_variables([include_node])
+                case Title():
+                    builder.set_title(include_node)
 
         return builder.build()
 
 
 class NamespaceParser(ElementParser):
+    """Parser for the `<ns>` tags."""
 
     def parse(self, element: _Element, context: ParsingContext) -> Namespace:
         return Namespace(prefix=element.attrib['prefix'], uri=element.attrib['uri'])
 
 
+class NameParser(ElementParser):
+    """Parser for the `<name>` tags."""
+
+    def parse(self, element: _Element, context: ParsingContext) -> Name:
+        if element.attrib.get('path'):
+            return Name(XPath(element.attrib['path']))
+        return Name()
+
+
+class ValueOfParser(ElementParser):
+    """Parser for the `<value-of>` tags."""
+
+    def parse(self, element: _Element, context: ParsingContext) -> ValueOf:
+        return ValueOf(XPath(element.attrib['select']))
+
+
 class TitleParser(ElementParser):
+    """Parser for the `<title>` tags."""
 
     def parse(self, element: _Element, context: ParsingContext) -> Title:
-        return Title(content=''.join(self.get_rich_content(element)))
+        return Title(content=''.join(self.get_rich_content(element, context)))
+
+
+class PhaseParser(ElementParser):
+    """Parser for the `<phase>` tags."""
+
+    def parse(self, element: _Element, context: ParsingContext) -> Phase:
+        builder = PhaseBuilder()
+
+        builder.add_attributes(element.attrib)
+        builder.add_active(self._parse_child_tags(element, context, 'active'))
+        builder.add_variables(self._parse_child_tags(element, context, 'let'))
+        builder.add_paragraphs(self._parse_child_tags(element, context, 'p'))
+
+        for include_node in self._parse_child_tags(element, context, 'include'):
+            match include_node:
+                case ActivePhase():
+                    builder.add_active([include_node])
+                case Variable():
+                    builder.add_variables([include_node])
+                case Paragraph():
+                    builder.add_paragraphs([include_node])
+
+        return builder.build()
+
+
+class ActivePhaseParser(ElementParser):
+    """Parser for the `<active>` tags."""
+
+    def parse(self, element: _Element, context: ParsingContext) -> ActivePhase:
+        content_parts = self.get_rich_content(element, context, parse_special=False)
+        content = None
+        if len(content_parts):
+            content = ''.join(content_parts)
+
+        return ActivePhase(pattern_id=element.attrib['pattern'], content=content)
+
+
+class DiagnosticsParser(ElementParser):
+    """Parser for the `<diagnostics>` tags."""
+
+    def parse(self, element: _Element, context: ParsingContext) -> Diagnostics:
+        diagnostics = []
+        diagnostics.extend(self._parse_child_tags(element, context, 'diagnostic'))
+
+        for include_node in self._parse_child_tags(element, context, 'include'):
+            diagnostics.append(include_node)
+
+        return Diagnostics(diagnostics)
+
+
+class DiagnosticParser(ElementParser):
+    """Parser for the `<diagnostic>` tags."""
+
+    def parse(self, element: _Element, context: ParsingContext) -> Diagnostic:
+        allowed_attributes = ['fpi', 'icon', 'id', 'role', 'see',
+                              '{http://www.w3.org/XML/1998/namespace}lang',
+                              '{http://www.w3.org/XML/1998/namespace}space']
+
+        attribute_handlers = {
+            '{http://www.w3.org/XML/1998/namespace}lang': lambda k, v: {'xml_lang': v},
+            '{http://www.w3.org/XML/1998/namespace}space': lambda k, v: {'xml_space': v}
+        }
+
+        attributes = parse_attributes(element.attrib, allowed_attributes, attribute_handlers)
+        return Diagnostic(content=self.get_rich_content(element, context), **attributes)
+
+
+class PropertiesParser(ElementParser):
+    """Parser for the `<properties>` tags."""
+
+    def parse(self, element: _Element, context: ParsingContext) -> Properties:
+        properties = []
+        properties.extend(self._parse_child_tags(element, context, 'property'))
+
+        for include_node in self._parse_child_tags(element, context, 'include'):
+            properties.append(include_node)
+
+        return Properties(properties)
+
+
+class PropertyParser(ElementParser):
+    """Parser for the `<property>` tags."""
+
+    def parse(self, element: _Element, context: ParsingContext) -> Property:
+        attributes = parse_attributes(element.attrib, ['id', 'role', 'scheme'])
+        return Property(content=self.get_rich_content(element, context), **attributes)
 
 
 class PatternParser(ElementParser):
@@ -266,11 +404,11 @@ class RuleParser(ElementParser):
 class IncludeParser(ElementParser):
     """Parse <include> tags.
 
-    This parses the XML in the referenced file into a SchematronNode. Due to the generic nature of the include node
-    this can be a node of any type.
+    This parses the XML in the referenced file into a SchematronASTNode. Due to the generic nature of the include node
+    this can be a node of any type. Note that Schematron includes do not support a multi-root XML document.
     """
 
-    def parse(self, element: _Element, context: ParsingContext) -> SchematronNode:
+    def parse(self, element: _Element, context: ParsingContext) -> SchematronASTNode:
         file_path = resolve_href(element.attrib['href'], context.base_path)
         xml = load_xml(file_path)
         parser = context.parser_factory.get_parser(etree.QName(xml).localname)
@@ -284,7 +422,7 @@ class VariableParser(ElementParser):
         if 'value' in element.attrib:
             return XPathVariable(name=element.attrib['name'], value=XPath(element.attrib['value']))
         else:
-            content = ''.join(self.get_rich_content(element, parse_special=False))
+            content = ''.join(self.get_rich_content(element, context, parse_special=False))
             return XMLVariable(name=element.attrib['name'], value=content)
 
 
@@ -293,15 +431,15 @@ class ParagraphParser(ElementParser):
 
     def parse(self, element: _Element, context: ParsingContext) -> Paragraph:
         attributes = parse_attributes(element.attrib, ['icon', 'id', 'class'], {'class': lambda k, v: {'class_': v}})
-        content = ''.join(self.get_rich_content(element, parse_special=False))
+        content = ''.join(self.get_rich_content(element, context, parse_special=False))
         return Paragraph(content=content, **attributes)
 
 
 class ExtendsParser(ElementParser):
     """Parse <extends> tags.
 
-    If the extends tag points to another file, we will load the rule from that file and return
-    wrapped in an `ExtendsExternal`. If the extends points to a rule by ID, we return an `ExtendsById`.
+    If the extends tag points to another file, we will load the rule from that file and return it
+    wrapped in an `ExtendsExternal`. If the `<extends>` points to a rule by ID, we return an `ExtendsById`.
     """
 
     def parse(self, element: _Element, context: ParsingContext) -> Extends:
@@ -311,8 +449,12 @@ class ExtendsParser(ElementParser):
         file_path = resolve_href(element.attrib['href'], context.base_path)
         xml = load_xml(file_path)
         parser = context.parser_factory.get_parser('rule')
+        rule = parser.parse(xml, context)
 
-        return ExtendsExternal(parser.parse(xml, context), file_path)
+        if not isinstance(rule, ExternalRule):
+            raise ValueError('The rule defined in the <extends> tag is invalid (contains context or is abstract).')
+
+        return ExtendsExternal(rule, file_path)
 
 
 class CheckParser(ElementParser):
@@ -341,7 +483,7 @@ class CheckParser(ElementParser):
         }
 
         attributes = parse_attributes(element.attrib, allowed_attributes, attribute_handlers)
-        return self.type_instance(content=self.get_rich_content(element), **attributes)
+        return self.type_instance(content=self.get_rich_content(element, context), **attributes)
 
 
 class AssertParser(CheckParser):
@@ -354,80 +496,3 @@ class ReportParser(CheckParser):
 
     def __init__(self):
         super().__init__(Report)
-
-
-
-test = '''
-<schema xmlns="http://purl.oclc.org/dsdl/schematron" schemaVersion="iso" queryBinding="xpath2">
-    <title>SCH-001</title>
-    <ns prefix="t" uri="test"/>
-
-    <pattern documents="current-date()">
-        <title>SCH-003</title>
-        <p>some paragraph</p>
-        <rule abstract="false" context="t:Document" flag="flagtest" fpi="fpitest" icon="icontest" id="idtest"
-                        role="roletest" see="seetest" subject="t:Header" xml:lang="nl" xml:space="preserve">
-            <let name="nametest" value="t:Footer" />
-            <let name="open_item"><data xmlns="http://test.nl">test</data></let>
-            <p/>
-            <p class="classtest">some details</p>
-            <assert id="TEST-R001" diagnostics="test1 test2" flag="flagtest" fpi="fpitest" icon="icontest"
-                        properties="property1 property2" role="roletest" see="seetest"
-                        subject="t:Header" xml:lang="nl" xml:space="preserve"
-                    test="t:Header">Start <value-of select="note/to/text()"/>, and <b>something</b> <value-of select="note/to/text()"/> <emph>afterwards</emph>.</assert>
-            <assert id="TEST-R002"
-                    test="t:Author">Document <name /> MUST <name path="/" /> contain author.</assert>
-            <assert id="TEST-R003"
-                    test="t:Date">Document MUST contain date.</assert>
-            <extends rule="idtest" />
-            <extends href="../tests/fixtures/extends_example.xml" />
-            <include href="../tests/fixtures/rule_include_example.xml" />
-        </rule>
-        <rule context="lions">
-            <report id="some_report" test="@alpha">Some alpha test</report>
-        </rule>
-        <include href="../tests/fixtures/pattern_include_example.xml" />
-    </pattern>
-
-  <pattern abstract="true" id="table-pattern">
-    <rule context="$table">
-      <assert test="$row">
-        The element <value-of select="local-name()"/> is a table structure.
-        Tables must contain the correct row elements.
-      </assert>
-    </rule>
-    <rule context="$table/$row">
-      <assert test="$entry">
-        The element <value-of select="local-name()"/> is a table row.
-        Rows must contain the correct cell elements.
-      </assert>
-    </rule>
-  </pattern>
-
-    <pattern is-a="table-pattern" >
-    <param name="table" value="table"/>
-    <param name="row" value="tr"/>
-    <param name="entry" value="td"/>
-  </pattern>
-
-</schema>
-'''
-
-
-schematron_xml = load_xml(test)
-parsing_context = ParsingContext()
-
-# assert_parser = parsing_context.parser_factory.get_parser('assert')
-assert_parser = SchemaParser()
-element = assert_parser.parse(schematron_xml, parsing_context)
-
-pprint(element)
-# pprint(element.patterns[0].rules[0].checks[0])
-# from dataclasses import dataclass, asdict
-# print(asdict(element))
-
-print()
-
-
-# builder = SchemaBuilder()
-# schema = builder.build()

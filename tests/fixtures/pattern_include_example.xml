@@ -1,5 +1,0 @@
-<rule context="cargo">
-    <assert test="@weight le 1">
-        Test on weight
-    </assert>
-</rule>

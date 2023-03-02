@@ -5,17 +5,17 @@ __email__ = 'robbert@altoida.com'
 
 from abc import ABCMeta, abstractmethod
 
-from pyschematron.parsers.ast import SchematronNode, Check, Variable, Paragraph, Extends, ConcreteRule, \
+from pyschematron.direct_mode.ast import SchematronASTNode, Check, Variable, Paragraph, Extends, ConcreteRule, \
     ExternalRule, AbstractRule, XPath, Rule, ConcretePattern, Pattern, Namespace, Schema, Title, AbstractPattern, \
-    InstancePattern, PatternParameter
-from pyschematron.parsers.xml.utils import parse_attributes
+    InstancePattern, PatternParameter, Phase, ActivePhase, Diagnostics, Properties
+from pyschematron.direct_mode.parsers.xml.utils import parse_attributes
 
 
-class SchematronNodeBuilder(metaclass=ABCMeta):
+class SchematronASTNodeBuilder(metaclass=ABCMeta):
     """Builder pattern for delayed construction of Schematron nodes."""
 
     @abstractmethod
-    def build(self) -> SchematronNode:
+    def build(self) -> SchematronASTNode:
         """Build a Schematron node based on the information in this builder.
 
         Returns:
@@ -23,7 +23,7 @@ class SchematronNodeBuilder(metaclass=ABCMeta):
         """
 
 
-class RuleBuilder(SchematronNodeBuilder, metaclass=ABCMeta):
+class RuleBuilder(SchematronASTNodeBuilder, metaclass=ABCMeta):
 
     def __init__(self):
         """Construct a Rule node out of the parts provided.
@@ -122,7 +122,7 @@ class ExternalRuleBuilder(RuleBuilder):
                             paragraphs=self.paragraphs, extends=self.extends, **self.attributes)
 
 
-class PatternBuilder(SchematronNodeBuilder, metaclass=ABCMeta):
+class PatternBuilder(SchematronASTNodeBuilder, metaclass=ABCMeta):
 
     def __init__(self):
         """Construct a Pattern node out of the parts provided.
@@ -216,20 +216,80 @@ class InstancePatternBuilder(PatternBuilder):
         return InstancePattern(params=self.pattern_parameters, **self.attributes)
 
 
-class SchemaBuilder(SchematronNodeBuilder):
+class PhaseBuilder(SchematronASTNodeBuilder):
 
     def __init__(self):
-        """Construct a Pattern node out of the parts provided."""
+        """Construct a Phase node out of the parts provided."""
+        self.active: list[ActivePhase] = []
+        self.variables: list[Variable] = []
+        self.paragraphs: list[Paragraph] = []
+        self.attributes = {}
+
+    def build(self) -> Phase:
+        return Phase(active=self.active, variables=self.variables, paragraphs=self.paragraphs, **self.attributes)
+
+    def add_active(self, nodes: list[ActivePhase]):
+        """Add a list of ActivePhase nodes
+
+        Args:
+            nodes: the nodes to add to the list of active phases.
+        """
+        self.active.extend(nodes)
+
+    def add_variables(self, nodes: list[Variable]):
+        """Add a list of Variable nodes.
+
+        Args:
+            nodes: the nodes to add to the list of variables.
+        """
+        self.variables.extend(nodes)
+
+    def add_paragraphs(self, nodes: list[Paragraph]):
+        """Add a list of Paragraph nodes.
+
+        Args:
+            nodes: the nodes to add to the list of paragraphs.
+        """
+        self.paragraphs.extend(nodes)
+
+    def add_attributes(self, element_attributes: dict[str, str]):
+        """Add all the attributes of the XML Pattern element in one go.
+
+        Args:
+            element_attributes: dictionary of attributes taken from the XML node
+        """
+        allowed_attributes = ['fpi', 'icon', 'id', 'see',
+                              '{http://www.w3.org/XML/1998/namespace}lang',
+                              '{http://www.w3.org/XML/1998/namespace}space']
+
+        attribute_handlers = {
+            '{http://www.w3.org/XML/1998/namespace}lang': lambda k, v: {'xml_lang': v},
+            '{http://www.w3.org/XML/1998/namespace}space': lambda k, v: {'xml_space': v}
+        }
+
+        attributes = parse_attributes(element_attributes, allowed_attributes, attribute_handlers)
+        self.attributes.update(attributes)
+
+
+class SchemaBuilder(SchematronASTNodeBuilder):
+
+    def __init__(self):
+        """Construct a Schema node out of the parts provided."""
         self.patterns: list[Pattern] = []
         self.namespaces: list[Namespace] = []
+        self.diagnostics: list[Diagnostics] = []
+        self.properties: list[Properties] = []
         self.title: Title | None = None
-        # self.variables: list[Variable] = []
+        self.variables: list[Variable] = []
         self.paragraphs: list[Paragraph] = []
-        # self.extends: list[Extends] = []
+        self.phases: list[Phase] = []
         self.attributes = {}
 
     def build(self) -> Schema:
-        return Schema(patterns=self.patterns, namespaces=self.namespaces, title=self.title)
+        return Schema(patterns=self.patterns, namespaces=self.namespaces, phases=self.phases,
+                      paragraphs=self.paragraphs, variables=self.variables,
+                      diagnostics=self.diagnostics, properties=self.properties, title=self.title,
+                      **self.attributes)
 
     def add_patterns(self, nodes: list[Pattern]):
         """Add a list of Pattern nodes
@@ -247,21 +307,37 @@ class SchemaBuilder(SchematronNodeBuilder):
         """
         self.namespaces.extend(nodes)
 
-    def set_title(self, node: Title | None):
-        """Set the title node.
+    def add_phases(self, nodes: list[Phase]):
+        """Add a list of Phase nodes
 
         Args:
-            node: the title node
+            nodes: the nodes to add to the list of phases.
         """
-        self.title = node
+        self.phases.extend(nodes)
 
-    # def add_variables(self, nodes: list[Variable]):
-    #     """Add a list of Variable nodes.
-    #
-    #     Args:
-    #         nodes: the nodes to add to the list of variables.
-    #     """
-    #     self.variables.extend(nodes)
+    def add_diagnostics(self, nodes: list[Diagnostics]):
+        """Add a list of Diagnostics nodes
+
+        Args:
+            nodes: the nodes to add to the list of diagnostics.
+        """
+        self.diagnostics.extend(nodes)
+
+    def add_properties(self, nodes: list[Properties]):
+        """Add a list of Properties nodes
+
+        Args:
+            nodes: the nodes to add to the list of properties.
+        """
+        self.properties.extend(nodes)
+
+    def add_variables(self, nodes: list[Variable]):
+        """Add a list of Variable nodes.
+
+        Args:
+            nodes: the nodes to add to the list of variables.
+        """
+        self.variables.extend(nodes)
 
     def add_paragraphs(self, nodes: list[Paragraph]):
         """Add a list of Paragraph nodes.
@@ -271,32 +347,32 @@ class SchemaBuilder(SchematronNodeBuilder):
         """
         self.paragraphs.extend(nodes)
 
-    # def add_extends(self, nodes: Extends):
-    #     """Add a list of extends nodes.
-    #
-    #     Args:
-    #         nodes: the nodes to add to the list of extends
-    #     """
-    #     self.extends.extend(nodes)
+    def set_title(self, node: Title | None):
+        """Set the title node.
+
+        Args:
+            node: the title node
+        """
+        self.title = node
 
     def add_attributes(self, element_attributes: dict[str, str]):
-        """Add all the attributes of the XML Rule element in one go.
+        """Add all the attributes of the XML Schema element in one go.
 
         Args:
             element_attributes: dictionary of attributes taken from the XML node
         """
-        # if 'context' in element_attributes:
-        #     self.attributes['context'] = XPath(element_attributes['context'])
-        #
-        # if 'subject' in element_attributes:
-        #     self.attributes['subject'] = XPath(element_attributes['subject'])
-        #
-        # for string_item in ['flag', 'fpi', 'icon', 'id', 'role', 'see']:
-        #     if string_item in element_attributes:
-        #         self.attributes[string_item] = element_attributes[string_item]
-        #
-        # for xml_item in ['lang', 'space']:
-        #     qname = '{http://www.w3.org/XML/1998/namespace}' + xml_item
-        #     if qname in element_attributes:
-        #         self.attributes[f'xml_{xml_item}'] = element_attributes[qname]
+        allowed_attributes = ['defaultPhase', 'fpi', 'icon', 'id',
+                              'queryBinding', 'schemaVersion', 'see',
+                              '{http://www.w3.org/XML/1998/namespace}lang',
+                              '{http://www.w3.org/XML/1998/namespace}space']
 
+        attribute_handlers = {
+            'defaultPhase': lambda k, v: {'default_phase': v},
+            'queryBinding': lambda k, v: {'query_binding': v},
+            'schemaVersion': lambda k, v: {'schema_version': v},
+            '{http://www.w3.org/XML/1998/namespace}lang': lambda k, v: {'xml_lang': v},
+            '{http://www.w3.org/XML/1998/namespace}space': lambda k, v: {'xml_space': v}
+        }
+
+        attributes = parse_attributes(element_attributes, allowed_attributes, attribute_handlers)
+        self.attributes.update(attributes)

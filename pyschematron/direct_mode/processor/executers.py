@@ -27,10 +27,14 @@ class XPathContextCopyable(elementpath.XPathContext):
                                     self.default_language, self.default_calendar, self.default_place)
 
 
-
 context = XPathContextCopyable(xml)
 
 parser = elementpath.XPath2Parser()
+
+# parser.register_custom_function(namespace='custom', local_name='string-length', inputs=['xs:string'],
+#                                 output='xs:integer', callback=(lambda inputs: len(inputs[0])))
+# parser.parse("custom:string-length('test')")
+
 node = parser.parse('current-time()')
 time.sleep(1)
 node2 = parser.parse('current-time()')

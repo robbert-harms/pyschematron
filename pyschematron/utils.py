@@ -8,7 +8,6 @@ from io import BytesIO, IOBase
 from pathlib import Path
 from typing import BinaryIO, Union
 
-import lxml
 from lxml import etree
 from lxml.etree import _Element
 

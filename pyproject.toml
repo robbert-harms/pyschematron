@@ -23,14 +23,16 @@ dependencies = [
     "appdirs==1.4.4",
     "lxml==4.9.1",
     "Jinja2==3.1.2",
-    "ruamel.yaml==0.17.21"
+    "ruyaml==0.91.0"
 ]
 
 [project.optional-dependencies]
 test = [
     "pytest==7.1.3",
     "tox",
-    "pytest-check==2.1.2"
+    "pytest-check==2.1.2",
+    "pytest-cov==4.0.0",
+    "pytest-html==3.2.0"
 ]
 doc = ["sphinx"]
 

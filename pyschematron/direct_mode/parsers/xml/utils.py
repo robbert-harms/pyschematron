@@ -70,6 +70,8 @@ def parse_attributes(attributes: dict[str, str],
     Returns:
         For each allowed attribute the parsed values.
     """
+    attribute_handlers = attribute_handlers or {}
+
     parsed_attributes = {}
     for item in allowed_attributes:
         if item in attributes:
