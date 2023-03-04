@@ -13,9 +13,9 @@ This library only supports the latest version of Schematron, `ISO/IEC 19757-3:20
 
 Currently, this library only supports a pure Python mode of Schematron validation.
 In this pure Python mode we load the Schematron into an internal representation and apply that on an XML.
-This pure Python mode only support XPath expressions and does not support XSLT functions.
 The advantage of direct evaluation is that it offers superior performance compared to an XSLT
 transformation based evaluation.
+The disadvantage is that it only supports XPath expressions and does not support XSLT functions.
 
 In the future we hope to expand this library with an XSLT transformation based processing.
 Unfortunately XSLT transformations require an XSLT processor,
@@ -52,10 +52,7 @@ todo
 *************
 Functionality
 *************
-At the moment this library only supports a pure Python direct mode evaluation of Schematron.
-This direct mode is faster than an XSLT based evaluation since it skips the whole XSLT transformations.
-The disadvantage is that some features are not supported.
-In the future we hope to extend this library with an XSLT transformation based evaluation.
+This library offers a basic implementation of Schematron using a pure Python "direct mode" evaluation method.
 
 Direct mode evaluation
 ======================
