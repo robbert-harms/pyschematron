@@ -11,7 +11,7 @@
 
     <let name="max-weight" value="xs:integer(1000)"/> <!-- kg -->
     <let name="max-volume" value="xs:integer(200)"/> <!-- m3 -->
-
+    
 
     <!-- Showcasing pattern with external extends -->
     <pattern id="pa_check-weights">

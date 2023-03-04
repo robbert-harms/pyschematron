@@ -37,7 +37,7 @@ parser = elementpath.XPath2Parser()
 
 node = parser.parse('current-time()')
 time.sleep(1)
-node2 = parser.parse('current-time()')
+node2 = parser.parse('$test * current-time()')
 
 current_node = parser.parse('.')
 
