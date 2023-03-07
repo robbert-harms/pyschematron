@@ -8,6 +8,8 @@ from io import StringIO
 from pathlib import Path
 from pprint import pprint
 
+from pyschematron.direct_mode.lib.ast_visitors import ResolveExtendsVisitor, FindIdVisitor, GetIDMapping, \
+    ResolveAbstractPatternsVisitor
 from pyschematron.direct_mode.lib.ast_yaml import ASTYaml
 from pyschematron.direct_mode.parsers.xml.parser import ParsingContext, SchemaParser
 from pyschematron.utils import load_xml
@@ -23,34 +25,21 @@ parsing_context = ParsingContext(base_path=schematron_path.parent)
 
 schematron_parser = SchemaParser()
 schema = schematron_parser.parse(schematron_xml, parsing_context)
-
-# pprint(schema)
-
-yaml = ASTYaml()
-# yaml.dump(schema, sys.stdout)
-
-yaml.dump({'b': 1, 'a': 2}, sys.stdout)
-
-with StringIO() as dumped:
-    yaml.dump(schema, dumped)
-    v = dumped.getvalue()
-    print(v)
-    loaded = yaml.load(v)
-print(loaded)
-print(loaded == schema)
-
-''''
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: "development"
-  labels:
-    name: "development"
+schema = ResolveExtendsVisitor(schema).apply(schema)
+schema = ResolveAbstractPatternsVisitor(schema).apply(schema)
 
 
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: "development"
-  labels:
-    name: "development"'''
+def yaml_stuff():
+    yaml = ASTYaml()
+    # yaml.dump(schema, sys.stdout)
+
+    yaml.dump({'b': 1, 'a': 2}, sys.stdout)
+
+    with StringIO() as dumped:
+        yaml.dump(schema, dumped)
+        v = dumped.getvalue()
+        print(v)
+        loaded = yaml.load(v)
+    print(loaded)
+    print(loaded == schema)
+yaml_stuff()

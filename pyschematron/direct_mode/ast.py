@@ -12,13 +12,73 @@ __maintainer__ = 'Robbert Harms'
 __email__ = 'robbert@xkls.nl'
 __licence__ = 'GPL v3'
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Iterable, Mapping, Any
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from pyschematron.direct_mode.ast_visitors import ASTVisitor
 
 
+@dataclass(slots=True, frozen=True)
 class SchematronASTNode:
     """Base class for all Schematron AST nodes."""
+
+    def accept_visitor(self, visitor: ASTVisitor) -> None:
+        """Accept a visitor on this node.
+
+        Args:
+            visitor: the visitor we accept and call
+        """
+        visitor.visit(self)
+
+    def get_init_values(self) -> dict[str, Any]:
+        """Get the initialisation values with which this class was instantiated.
+
+        Returns:
+            A dictionary with the arguments which instantiated this object.
+        """
+        return {field.name: getattr(self, field.name) for field in fields(self)}
+
+    def with_updated(self, **updated_items) -> SchematronASTNode:
+        """Get a copy of this AST node with updated init values.
+
+        This gets the current set of init values and updates those with the provided items.
+
+        Args:
+            updated_items: the keyword elements we wish to update
+
+        Returns:
+            A new copy of this node with the relevant items updated.
+        """
+        init_values = self.get_init_values()
+        init_values.update(**updated_items)
+        return type(self)(**init_values)
+
+    def get_children(self) -> list[SchematronASTNode]:
+        """Get a list of all the AST nodes in this node.
+
+        This should return all the references to AST nodes in this node, all bundled in one list.
+
+        Returns:
+            All the child nodes in this node
+        """
+        def get_ast_nodes(input):
+            children = []
+
+            if isinstance(input, SchematronASTNode):
+                children.append(input)
+            elif isinstance(input, Mapping):
+                for el in input.values():
+                    children.extend(get_ast_nodes(el))
+            elif isinstance(input, Iterable) and not isinstance(input, str):
+                for el in input:
+                    children.extend(get_ast_nodes(el))
+
+            return children
+
+        return get_ast_nodes(self.get_init_values())
 
 
 @dataclass(slots=True, frozen=True)
@@ -71,7 +131,7 @@ class Namespace(SchematronASTNode):
     """Representation of an `<ns>` tag.
 
     Args:
-        prefix: the prefix for use in the Schematron and the XPath asserts
+        prefix: the prefix for use in the Schematron and the Queries
         uri: the namespace's URI
     """
     prefix: str
@@ -199,7 +259,7 @@ class Pattern(SchematronASTNode):
         xml_lang: the default natural language for this node
         xml_space: defines how whitespace must be handled for this element.
     """
-    documents: XPath | None = None
+    documents: Query | None = None
     id: str | None = None
     fpi: str | None = None
     icon: str | None = None
@@ -226,10 +286,7 @@ class ConcretePattern(Pattern):
 
 @dataclass(slots=True, frozen=True)
 class AbstractPattern(Pattern):
-    """An abstract pattern, one with the attribute abstract set to True.
-
-    Within this class, all the items are still loaded as XPath elements, even though some may contain
-    abstract pattern variables. The user of this class must localize these for `InheritedPattern` instances.
+    """An abstract pattern, coming from a pattern with the attribute `@abstract` set to True.
 
     Args:
         rules: the list of rules
@@ -250,6 +307,7 @@ class InstancePattern(Pattern):
     Args:
         params: the list of pattern parameters
     """
+    abstract_id_ref: str
     params: list[PatternParameter] = field(default_factory=list)
 
 
@@ -281,7 +339,7 @@ class Rule(SchematronASTNode):
         icon: reference to a graphic file to be used in the error message
         role: a description of the error message or the rule
         see: a URI or URL referencing background information
-        subject: an xpath string referencing the node to which we assign an error message
+        subject: a query referencing the node to which we assign an error message
         xml_lang: the default natural language for this node
         xml_space: defines how whitespace must be handled for this element.
     """
@@ -294,7 +352,7 @@ class Rule(SchematronASTNode):
     icon: str | None = None
     role: str | None = None
     see: str | None = None
-    subject: XPath | None = None
+    subject: Query | None = None
     xml_lang: str | None = None
     xml_space: Literal['default', 'preserve'] | None = None
 
@@ -307,7 +365,7 @@ class ConcreteRule(Rule):
         context: the attribute with the rule's context
         id: the identifier of this test (optional)
     """
-    context: XPath
+    context: Query
     id: str | None = None
 
 
@@ -337,9 +395,9 @@ class ExtendsById(Extends):
     """Represents an <extends> tag which points to an abstract rule in this Schema.
 
     Args:
-        id_pointer: the identifier of a Rule inside the Schematron to which we refer
+        id_ref: the identifier of a Rule inside the Schematron to which we refer
     """
-    id_pointer: str
+    id_ref: str
 
 
 @dataclass(slots=True, frozen=True)
@@ -371,11 +429,11 @@ class Check(SchematronASTNode):
         properties: list of identifiers of property items
         role: a description of the error message or the rule
         see: a URI or URL referencing background information
-        subject: an xpath string referencing the node to which we assign an error message
+        subject: a query referencing the node to which we assign an error message
         xml_lang: the default natural language for this node
         xml_space: defines how whitespace must be handled for this element.
     """
-    test: XPath
+    test: Query
     content: list[str | ValueOf | Name]
     diagnostics: list[str] | None = None
     flag: str | None = None
@@ -385,7 +443,7 @@ class Check(SchematronASTNode):
     properties: list[str] | None = None
     role: str | None = None
     see: str | None = None
-    subject: XPath | None = None
+    subject: Query | None = None
     xml_lang: str | None = None
     xml_space: Literal['default', 'preserve'] | None = None
 
@@ -415,14 +473,14 @@ class Variable(SchematronASTNode):
 
 
 @dataclass(slots=True, frozen=True)
-class XPathVariable(Variable):
-    """Representation of a `<let>` tag with an XPath value attribute.
+class QueryVariable(Variable):
+    """Representation of a `<let>` tag with a Query attribute.
 
     Args:
         name: the name attribute
         value: the value attribute
     """
-    value: XPath
+    value: Query
 
 
 @dataclass(slots=True, frozen=True)
@@ -466,19 +524,19 @@ class Title(SchematronASTNode):
 
 
 @dataclass(slots=True, frozen=True)
-class XPath(SchematronASTNode):
-    """Representation of an XPath for in use in the Schematron AST nodes"""
-    xpath: str
+class Query(SchematronASTNode):
+    """Representation of a Query used in the Schematron AST nodes"""
+    query: str
 
 
 @dataclass(slots=True, frozen=True)
 class ValueOf(SchematronASTNode):
     """Representation of a `<value-of>` node."""
-    select: XPath
+    select: Query
 
 
 @dataclass(slots=True, frozen=True)
 class Name(SchematronASTNode):
     """Representation of a `<name>` node."""
-    path: XPath | None = None
+    path: Query | None = None
 

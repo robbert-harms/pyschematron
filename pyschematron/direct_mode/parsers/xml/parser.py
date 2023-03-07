@@ -14,7 +14,7 @@ from lxml import etree
 from lxml.etree import _Element
 
 from pyschematron.direct_mode.ast import Schema, Check, Assert, SchematronASTNode, Pattern, Rule, Report, Variable, \
-    Paragraph, ExtendsById, Extends, ExtendsExternal, ExternalRule, XPath, XPathVariable, XMLVariable, \
+    Paragraph, ExtendsById, Extends, ExtendsExternal, ExternalRule, Query, QueryVariable, XMLVariable, \
     Namespace, Title, PatternParameter, ValueOf, Name, Phase, ActivePhase, Diagnostic, Diagnostics, Properties, Property
 from pyschematron.direct_mode.parsers.xml.builders import ConcreteRuleBuilder, ExternalRuleBuilder, \
     AbstractRuleBuilder, ConcretePatternBuilder, SchemaBuilder, AbstractPatternBuilder, \
@@ -208,7 +208,7 @@ class NameParser(ElementParser):
 
     def parse(self, element: _Element, context: ParsingContext) -> Name:
         if element.attrib.get('path'):
-            return Name(XPath(element.attrib['path']))
+            return Name(Query(element.attrib['path']))
         return Name()
 
 
@@ -216,7 +216,7 @@ class ValueOfParser(ElementParser):
     """Parser for the `<value-of>` tags."""
 
     def parse(self, element: _Element, context: ParsingContext) -> ValueOf:
-        return ValueOf(XPath(element.attrib['select']))
+        return ValueOf(Query(element.attrib['select']))
 
 
 class TitleParser(ElementParser):
@@ -420,7 +420,7 @@ class VariableParser(ElementParser):
 
     def parse(self, element: _Element, context: ParsingContext) -> Variable:
         if 'value' in element.attrib:
-            return XPathVariable(name=element.attrib['name'], value=XPath(element.attrib['value']))
+            return QueryVariable(name=element.attrib['name'], value=Query(element.attrib['value']))
         else:
             content = ''.join(self.get_rich_content(element, context, parse_special=False))
             return XMLVariable(name=element.attrib['name'], value=content)
@@ -474,10 +474,10 @@ class CheckParser(ElementParser):
                               '{http://www.w3.org/XML/1998/namespace}space']
 
         attribute_handlers = {
-            'test': lambda k, v: {k: XPath(v)},
+            'test': lambda k, v: {k: Query(v)},
             'diagnostics': lambda k, v: {k: v.split(' ')},
             'properties': lambda k, v: {k: v.split(' ')},
-            'subject': lambda k, v: {k: XPath(v)},
+            'subject': lambda k, v: {k: Query(v)},
             '{http://www.w3.org/XML/1998/namespace}lang': lambda k, v: {'xml_lang': v},
             '{http://www.w3.org/XML/1998/namespace}space': lambda k, v: {'xml_space': v}
         }

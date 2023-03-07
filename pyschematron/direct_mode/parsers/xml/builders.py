@@ -6,7 +6,7 @@ __email__ = 'robbert@altoida.com'
 from abc import ABCMeta, abstractmethod
 
 from pyschematron.direct_mode.ast import SchematronASTNode, Check, Variable, Paragraph, Extends, ConcreteRule, \
-    ExternalRule, AbstractRule, XPath, Rule, ConcretePattern, Pattern, Namespace, Schema, Title, AbstractPattern, \
+    ExternalRule, AbstractRule, Query, Rule, ConcretePattern, Pattern, Namespace, Schema, Title, AbstractPattern, \
     InstancePattern, PatternParameter, Phase, ActivePhase, Diagnostics, Properties
 from pyschematron.direct_mode.parsers.xml.utils import parse_attributes
 
@@ -79,8 +79,8 @@ class RuleBuilder(SchematronASTNodeBuilder, metaclass=ABCMeta):
                               '{http://www.w3.org/XML/1998/namespace}space']
 
         attribute_handlers = {
-            'context': lambda k, v: {k: XPath(v)},
-            'subject': lambda k, v: {k: XPath(v)},
+            'context': lambda k, v: {k: Query(v)},
+            'subject': lambda k, v: {k: Query(v)},
             '{http://www.w3.org/XML/1998/namespace}lang': lambda k, v: {'xml_lang': v},
             '{http://www.w3.org/XML/1998/namespace}space': lambda k, v: {'xml_space': v}
         }
@@ -182,12 +182,13 @@ class PatternBuilder(SchematronASTNodeBuilder, metaclass=ABCMeta):
         Args:
             element_attributes: dictionary of attributes taken from the XML node
         """
-        allowed_attributes = ['documents', 'fpi', 'icon', 'id', 'see',
+        allowed_attributes = ['documents', 'fpi', 'icon', 'id', 'see', 'is-a',
                               '{http://www.w3.org/XML/1998/namespace}lang',
                               '{http://www.w3.org/XML/1998/namespace}space']
 
         attribute_handlers = {
-            'documents': lambda k, v: {k: XPath(v)},
+            'documents': lambda k, v: {k: Query(v)},
+            'is-a': lambda k, v: {'abstract_id_ref': v},
             '{http://www.w3.org/XML/1998/namespace}lang': lambda k, v: {'xml_lang': v},
             '{http://www.w3.org/XML/1998/namespace}space': lambda k, v: {'xml_space': v}
         }

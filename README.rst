@@ -62,10 +62,12 @@ When applied to a document, the direct mode evaluation follows this procedure to
 
 #. Read in the Schematron from either a document or a string.
    In this phase the document is loaded into an AST (abstract syntax tree).
-   All `<includes />` and `<extends />` are resolved, leading to one large document tree.
+   All `<includes />` are resolved and inlined into the AST.
+   All `<extends />` are loaded but not fully resolved at this stage.
 #. Recreate the AST without abstract patterns and rules.
-   In this phase we process the AST to create a concrete set of patterns and rules,
-   all abstract patterns and rules are resolved.
+   In this phase we process the AST to create a concrete set of patterns and rules.
+   All `<extends />` are resolved, abstract patterns are instantiated
+   and redundant abstract rules and patterns are removed.
 #. Determine the query binding language to use.
    This library only supports `xslt`, `xslt2`, `xslt3`, `xpath`, `xpath2`, `xpath3`, and `xpath31`,
    where all `xslt` variations are limited to XPath expressions only.
