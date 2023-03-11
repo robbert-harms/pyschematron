@@ -13,6 +13,12 @@ from pyschematron.direct_mode.lib.utils import macro_expand
 
 
 class ASTVisitor(metaclass=ABCMeta):
+    """Classes of this type represent visitors according to the visitor pattern.
+
+    Instead of a typed double dispatch we use dynamic double dispatching in which each node, when visited calls
+    the :meth:``visit` of this class instead of a visit method for each node type. This makes it easier to
+    do edits on class names since the types can be looked up by an IDE.
+    """
 
     @abstractmethod
     def visit(self, ast_node: SchematronASTNode) -> None:

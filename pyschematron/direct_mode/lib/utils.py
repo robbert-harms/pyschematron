@@ -12,6 +12,8 @@ def macro_expand(string: str, macros: dict[str, str]) -> str:
     This replaces all the macros in one go. This is a specialized version of multi-string replacement which
     assumes all the replacements are unique (as they are in macro's).
 
+    We use this function for instantiating abstract patterns to concrete patterns.
+
     This assumes the macros already have the prefix `$`.
 
     Args:

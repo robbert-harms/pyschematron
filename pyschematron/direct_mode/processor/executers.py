@@ -27,7 +27,7 @@ class XPathContextCopyable(elementpath.XPathContext):
                                     self.default_language, self.default_calendar, self.default_place)
 
 
-context = XPathContextCopyable(xml)
+context = XPathContextCopyable(xml, variables={'test': 1})
 
 parser = elementpath.XPath2Parser()
 

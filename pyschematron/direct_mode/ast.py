@@ -18,7 +18,7 @@ from typing import Literal, Iterable, Mapping, Any
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from pyschematron.direct_mode.ast_visitors import ASTVisitor
+    from pyschematron.direct_mode.lib.ast_visitors import ASTVisitor
 
 
 @dataclass(slots=True, frozen=True)
@@ -477,7 +477,6 @@ class QueryVariable(Variable):
     """Representation of a `<let>` tag with a Query attribute.
 
     Args:
-        name: the name attribute
         value: the value attribute
     """
     value: Query
@@ -491,7 +490,6 @@ class XMLVariable(Variable):
     value would be `<some-xml xmlns="...">...</some-xml>`, i.e. some XML in some namespace not Schematron's.
 
     Args:
-        name: the name attribute
         value: the content of the `<let>` element.
     """
     value: str

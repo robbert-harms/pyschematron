@@ -41,6 +41,9 @@
             <assert test="xs:integer(@volume) le $max-volume" properties="pr_maxVolume pr_volume">
                 Volume not correct (<value-of select="@volume"/> vs <value-of select="$max-volume"/> at <name/>).
             </assert>
+            <report test="xs:integer(@volume) gt $max-volume">
+                We report an item with a volume greater than allowed.
+            </report>
         </rule>
     </pattern>
 
