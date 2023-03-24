@@ -2,8 +2,8 @@ SHELL := /bin/bash
 PYTHON := $$(which python3)
 PIP := $$(which pip3)
 PYTEST := $$(which pytest)
-GIT_BRANCH := $$(git branch --show-current)
 PROJECT_NAME := pyschematron
+GIT_BRANCH := $$(git branch --show-current)
 PROJECT_VERSION := $$(python -c 'from pyschematron import __version__; print(__version__)')
 
 .PHONY: help
@@ -17,14 +17,13 @@ help:
 	@echo "docs-pdf: generate the PDF documentation, including API docs"
 	@echo "docs-man: generate the linux manpages"
 	@echo "docs-changelog: generate the changelog documentation"
+	@echo "install-deps: install all the dependencies"
 	@echo "prepare-release: prepare for a new release"
-	@echo "zip: create the zip file used for the release"
 	@echo "release: package and release the new version"
 
 
 .PHONY: clean
 clean: clean-build clean-pyc clean-test
-	$(PYTHON) setup.py clean
 
 .PHONY: clean-build
 clean-build:
@@ -80,6 +79,7 @@ test-all:
 
 .PHONY: docs
 docs:
+	mkdir -p build
 	rm -f docs/$(PROJECT_NAME)*.rst
 	rm -f docs/modules.rst
 	$(MAKE) -C docs clean
@@ -89,6 +89,7 @@ docs:
 
 .PHONY: docs-pdf
 docs-pdf:
+	mkdir -p build
 	rm -f docs/$(PROJECT_NAME)*.rst
 	rm -f docs/modules.rst
 	$(MAKE) -C docs clean
@@ -135,13 +136,6 @@ release-git:
 	git tag -a v$(PROJECT_VERSION) -m "Version $(PROJECT_VERSION)"
 	git push origin --tags
 
-.PHONY: zip
-zip:
-	mkdir -p build
-	rm -rf build/*
-	zip build/$(ZIP_BASENAME)-v$(PROJECT_VERSION).zip -r application.py analysis_worker requirements.txt Procfile .platform
-	cp build/$(ZIP_BASENAME)-v$(PROJECT_VERSION).zip build/$(ZIP_BASENAME)-deploy.zip
-
 .PHONY: release-pip
 release-pip:
 	$(PYTHON) setup.py sdist bdist_wheel
@@ -152,11 +146,3 @@ dist: clean
 	$(PYTHON) setup.py sdist
 	$(PYTHON) setup.py bdist_wheel
 	ls -l dist
-
-.PHONY: install
-install: dist
-	$(PIP) install --upgrade --no-deps --force-reinstall dist/$(PROJECT_NAME)-*.tar.gz
-
-.PHONY: uninstall
-uninstall:
-	$(PIP) uninstall -y $(PROJECT_NAME)

@@ -1,12 +1,15 @@
 __author__ = 'Robbert Harms'
-__date__ = '2023-02-14'
+__date__ = '2023-03-24'
 __maintainer__ = 'Robbert Harms'
 __email__ = 'robbert@altoida.com'
+
 
 import time
 
 import elementpath
 import lxml.etree as etree
+
+
 
 xml = etree.fromstring('''
 <html>

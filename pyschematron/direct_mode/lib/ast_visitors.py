@@ -100,10 +100,10 @@ class FindIdVisitor(ASTVisitorWithResult):
 
 
 class GetIDMapping(ASTVisitorWithResult):
-    __slots__ = ['_id_mapping']
+    __slots__ = ['_result']
 
     def __init__(self):
-        """A visitor which maps all nodes with an id to their id"""
+        """A visitor which maps all nodes with an id to their id."""
         super().__init__()
         self._result = {}
 
