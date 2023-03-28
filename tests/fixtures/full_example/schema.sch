@@ -9,7 +9,8 @@
     <p>This checks the cargo manifest on weight, size, and vehicles on number of wheels.
         By default it checks on weight only.</p>
 
-    <let name="max-weight" value="xs:integer(1000)"/> <!-- kg -->
+    <!-- Showing dynamic variables. -->
+    <let name="max-weight" value="xs:integer(/c:cargo/c:vehicles[1]/c:apple[1]/@weight)"/> <!-- kg -->
     <let name="max-volume" value="xs:integer(200)"/> <!-- m3 -->
 
 

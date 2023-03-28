@@ -9,68 +9,92 @@ import time
 import elementpath
 import lxml.etree as etree
 
-
+from pyschematron.direct_mode.processor.queries.factories import DefaultQueryParserFactory, \
+    DefaultEvaluationContextFactory
+from pyschematron.direct_mode.processor.queries.xpath_elementpath import XPathQueryParser, XPath2QueryParser, \
+    XPathEvaluationContext
 
 xml = etree.fromstring('''
 <html>
+    <head></head>
     <body>
         <p>Test</p>
     </body>
 </html>
 ''')
 
+parser = DefaultQueryParserFactory().get_query_parser('xslt3')
+evaluation_context = DefaultEvaluationContextFactory().get_evaluation_context('xslt3')
 
-class XPathContextCopyable(elementpath.XPathContext):
+evaluation_context = evaluation_context.with_namespaces({'c': 'http://www.amazing-cargo.com/xml/data/2023'})
+evaluation_context = evaluation_context.with_xml_root(xml)
+evaluation_context = evaluation_context.with_variables({'test': 100})
 
-    def with_item(self, item):
-        return XPathContextCopyable(self.root, self.namespaces, item, self.position,
-                                    self.size, self.axis, self.variables, self.current_dt, self.timezone,
-                                    self.documents, self.collections, self.default_collection, self.text_resources,
-                                    self.resource_collections, self.default_resource_collection, self.allow_environment,
-                                    self.default_language, self.default_calendar, self.default_place)
-
-
-context = XPathContextCopyable(xml, variables={'test': 1})
-
-parser = elementpath.XPath2Parser()
-
-# parser.register_custom_function(namespace='custom', local_name='string-length', inputs=['xs:string'],
-#                                 output='xs:integer', callback=(lambda inputs: len(inputs[0])))
-# parser.parse("custom:string-length('test')")
-
-node = parser.parse('current-time()')
-time.sleep(1)
-node2 = parser.parse('$test * current-time()')
-
-current_node = parser.parse('.')
-
-print(node.evaluate(context))
-print(node2.evaluate(context))
-
-
-p_element = parser.parse('/html/body/p').evaluate(context)[0]
-print(p_element)
-print(current_node.evaluate(context.with_item(p_element)))
-print(node.evaluate(context.with_item(p_element)))
-
-print(node)
+query = parser.parse('$test * count(//html/*)')
+print(query.evaluate(evaluation_context))
 
 
 
-# elementpath.Selector
+# context.add_variables({'max-weight': 'xs:integer(1000)')
 
 
-def lxml_xpath():
-    p_node = xml.xpath('//html/body/p')[0]
-    parent_selector = p_node.xpath('//html')
-    return parent_selector
+
+def direct():
+
+    class XPathContextCopyable(elementpath.XPathContext):
+
+        def with_item(self, item):
+            return XPathContextCopyable(self.root, self.namespaces, item, self.position,
+                                        self.size, self.axis, self.variables, self.current_dt, self.timezone,
+                                        self.documents, self.collections, self.default_collection, self.text_resources,
+                                        self.resource_collections, self.default_resource_collection, self.allow_environment,
+                                        self.default_language, self.default_calendar, self.default_place)
+
+    parser = elementpath.XPath2Parser()
+
+    context = XPathContextCopyable(xml, variables={'test': parser.parse('xs:integer(1000)').evaluate()})
 
 
-def elementpath_xpath():
-    p_node = elementpath.select(xml, '//html/body/p')[0]
-    parent_selector = elementpath.select(xml, '//html', item=p_node)
-    return parent_selector
+
+    # parser.register_custom_function(namespace='custom', local_name='string-length', inputs=['xs:string'],
+    #                                 output='xs:integer', callback=(lambda inputs: len(inputs[0])))
+    # parser.parse("custom:string-length('test')")
+
+    node = parser.parse('current-time()')
+    time.sleep(1)
+    node2 = parser.parse('$test * 5')
+
+    current_node = parser.parse('.')
+
+    print(node.evaluate(context))
+    print(node2.evaluate(context))
 
 
-print(lxml_xpath())
-print(elementpath_xpath())
+    p_element = parser.parse('/html/body/p').evaluate(context)[0]
+    print(p_element)
+    print(current_node.evaluate(context.with_item(p_element)))
+    print(node.evaluate(context.with_item(p_element)))
+
+    print(node)
+
+direct()
+
+
+#
+# # elementpath.Selector
+#
+#
+# def lxml_xpath():
+#     p_node = xml.xpath('//html/body/p')[0]
+#     parent_selector = p_node.xpath('//html')
+#     return parent_selector
+#
+#
+# def elementpath_xpath():
+#     p_node = elementpath.select(xml, '//html/body/p')[0]
+#     parent_selector = elementpath.select(xml, '//html', item=p_node)
+#     return parent_selector
+#
+#
+# print(lxml_xpath())
+# print(elementpath_xpath())
