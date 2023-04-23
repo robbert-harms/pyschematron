@@ -8,11 +8,11 @@ import time
 
 import elementpath
 import lxml.etree as etree
+from elementpath.xpath3 import XPath3Parser
 
-from pyschematron.direct_mode.processor.queries.factories import DefaultQueryParserFactory, \
-    DefaultEvaluationContextFactory
-from pyschematron.direct_mode.processor.queries.xpath_elementpath import XPathQueryParser, XPath2QueryParser, \
-    XPathEvaluationContext
+from pyschematron.direct_mode.processor.queries.factories import QueryBindingFactory, DefaultQueryBindingFactory
+from pyschematron.direct_mode.processor.queries.xpath_query_binding import XPathQueryParser, XPath2QueryParser, \
+    XPathEvaluationContext, SimpleCustomXPathFunction
 
 xml = etree.fromstring('''
 <html>
@@ -23,17 +23,20 @@ xml = etree.fromstring('''
 </html>
 ''')
 
-parser = DefaultQueryParserFactory().get_query_parser('xslt3')
-evaluation_context = DefaultEvaluationContextFactory().get_evaluation_context('xslt3')
+query_processing_factory = DefaultQueryBindingFactory().get_query_processing_factory('xslt3')
 
+parser = query_processing_factory.get_query_parser()
+parser = parser.with_namespaces({'test': 'http://test.com'})
+parser = parser.with_custom_function(SimpleCustomXPathFunction(lambda el: el * 5, 'mult', 'test'))
+
+evaluation_context = query_processing_factory.get_evaluation_context()
 evaluation_context = evaluation_context.with_namespaces({'c': 'http://www.amazing-cargo.com/xml/data/2023'})
 evaluation_context = evaluation_context.with_xml_root(xml)
 evaluation_context = evaluation_context.with_variables({'test': 100})
 
-query = parser.parse('$test * count(//html/*)')
+
+query = parser.parse('test:mult($test * count(//html/*))')
 print(query.evaluate(evaluation_context))
-
-
 
 # context.add_variables({'max-weight': 'xs:integer(1000)')
 

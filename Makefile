@@ -4,7 +4,7 @@ PIP := $$(which pip3)
 PYTEST := $$(which pytest)
 PROJECT_NAME := pyschematron
 GIT_BRANCH := $$(git branch --show-current)
-PROJECT_VERSION := $$(python -c 'from pyschematron import __version__; print(__version__)')
+PROJECT_VERSION := $(shell grep -m 1 version pyproject.toml | tr -s ' ' | tr -d '"' | tr -d "'" | cut -d' ' -f3)
 
 .PHONY: help
 help:

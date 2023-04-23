@@ -9,7 +9,7 @@ __licence__ = 'GPL v3'
 from abc import ABCMeta, abstractmethod
 from typing import Any
 
-from elementpath.xpath_nodes import RootArgType
+from elementpath.tree_builders import RootArgType
 
 
 class QueryParser(metaclass=ABCMeta):

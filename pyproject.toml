@@ -18,8 +18,8 @@ authors = [
     { name = "Robbert Harms", email = "robbert@xkls.nl" }
 ]
 dependencies = [
-    "xmlschema==2.2.2",
-    "elementpath==4.0.1",
+    "xmlschema==2.2.3",
+    "elementpath==4.1.1",
     "toml==0.10.2",
     "typer[all]==0.7.0",
     "appdirs==1.4.4",

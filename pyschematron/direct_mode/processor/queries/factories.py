@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __author__ = 'Robbert Harms'
 __date__ = '2023-03-25'
 __maintainer__ = 'Robbert Harms'
@@ -7,53 +9,41 @@ __licence__ = 'GPL v3'
 from abc import ABCMeta, abstractmethod
 
 from pyschematron.direct_mode.processor.queries.base import QueryParser, EvaluationContext
-from pyschematron.direct_mode.processor.queries.xpath_elementpath import XPath1QueryParser, XPath2QueryParser, \
+from pyschematron.direct_mode.processor.queries.xpath_query_binding import XPath1QueryParser, XPath2QueryParser, \
     XPath3QueryParser, XPath31QueryParser, XPathEvaluationContext
 
 
-class QueryParserFactory(metaclass=ABCMeta):
-    """Base class for query parser factories.
+class QueryBindingFactory(metaclass=ABCMeta):
+    """Base class for query binding factories.
 
     In Schematron, the queryBinding attribute determines which query language is used. This factory
-    allows you to get the right parser for your query binding language.
+    allows you to get the right query factory for your query binding language.
+
+    This is part of the `abstract factory` design pattern. This factory generates factories to create the
+    query parser and evaluation context specialized to a specific query binding.
     """
 
     @abstractmethod
-    def get_query_parser(self, query_binding: str) -> QueryParser:
-        """Get the query parser for the specified query binding.
+    def get_query_processing_factory(self, query_binding: str) -> QueryProcessingFactory:
+        """Get the factory you can use to get the query parser and evaluation context for your query binding.
+
+        The first factory (this one) allows you to generate specialized factories for specific query bindings.
 
         Args:
             query_binding: the query binding for which we want to get a parser.
 
+        Returns:
+            A query processing factory specialized for this query binding language.
+
         Raises:
-            ValueError: if no parser could be found for the indicated query binding.
+            ValueError: if no query processing factory could be found for the indicated query binding.
         """
 
 
-class EvaluationContextFactory(metaclass=ABCMeta):
-    """Base class for evaluation context factories.
-
-    In Schematron, the queryBinding attribute determines which query language is used. This factory
-    allows you to get the right evaluation context matching the query parser.
-    """
-
-    @abstractmethod
-    def get_evaluation_context(self, query_binding: str) -> EvaluationContext:
-        """Get the evaluation context for the specified query binding.
-
-        Args:
-            query_binding: the query binding for which we want to get the evaluation context.
-
-        Raises:
-            ValueError: if no evaluation context could be found for the indicated query binding.
-        """
-
-
-
-class DefaultQueryParserFactory(QueryParserFactory):
+class DefaultQueryBindingFactory(QueryBindingFactory):
 
     def __init__(self):
-        """The default query parser factory.
+        """The default query binding factory.
 
         This factory only supports XSLT and XPath query languages. The XSLT query binding is additionally limited
         to XPath expressions.
@@ -67,21 +57,6 @@ class DefaultQueryParserFactory(QueryParserFactory):
             'xpath3': XPath3QueryParser(),
             'xpath31': XPath31QueryParser()
         }
-
-    def get_query_parser(self, query_binding: str) -> QueryParser:
-        try:
-            return self._parsers[query_binding]
-        except KeyError:
-            raise ValueError(f'No parser could be found for the query binding "{query_binding}".')
-
-
-class DefaultEvaluationContextFactory(EvaluationContextFactory):
-
-    def __init__(self):
-        """The default evaluation context factory.
-
-        The evaluation contexts provided by this class should match those of the :class:`DefaultQueryParserFactory`.
-        """
         self._contexts = {
             'xslt': XPathEvaluationContext(),
             'xslt2': XPathEvaluationContext(),
@@ -92,8 +67,52 @@ class DefaultEvaluationContextFactory(EvaluationContextFactory):
             'xpath31': XPathEvaluationContext()
         }
 
-    def get_evaluation_context(self, query_binding: str) -> EvaluationContext:
+    def get_query_processing_factory(self, query_binding: str) -> QueryProcessingFactory:
         try:
-            return self._contexts[query_binding]
+            parser = self._parsers[query_binding]
+            context = self._contexts[query_binding]
+            return SimpleQueryProcessingFactory(parser, context)
         except KeyError:
-            raise ValueError(f'No evaluation context could be found for the query binding "{query_binding}".')
+            raise ValueError(f'No parser could be found for the query binding "{query_binding}".')
+
+
+class QueryProcessingFactory(metaclass=ABCMeta):
+    """Specialized query processing factory.
+
+    This provides you with a query parser and evaluation context which match with each other.
+    """
+
+    @abstractmethod
+    def get_query_parser(self) -> QueryParser:
+        """Get the query parser for the bound query binding.
+
+        Returns:
+            A query parser to parse queries in the Schematron
+        """
+
+    @abstractmethod
+    def get_evaluation_context(self) -> EvaluationContext:
+        """Get the evaluation context for the bound query binding.
+
+        Returns:
+            An evaluation context to evaluate the parsed queries.
+        """
+
+
+class SimpleQueryProcessingFactory(QueryProcessingFactory):
+
+    def __init__(self, query_parser: QueryParser, evaluation_context: EvaluationContext):
+        """Simple query processing factory specialized to a specific query parser and evaluation context.
+
+        Args:
+            query_parser: the query parser this instance specialize in
+            evaluation_context: the evaluation context this instance specializes in
+        """
+        self._query_parser = query_parser
+        self._evaluation_context = evaluation_context
+
+    def get_query_parser(self) -> QueryParser:
+        return self._query_parser
+
+    def get_evaluation_context(self) -> EvaluationContext:
+        return self._evaluation_context
