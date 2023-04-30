@@ -8,8 +8,8 @@ __licence__ = 'GPL v3'
 
 from abc import ABCMeta, abstractmethod
 
-from pyschematron.direct_mode.processor.queries.base import QueryParser, EvaluationContext
-from pyschematron.direct_mode.processor.queries.xpath_query_binding import XPath1QueryParser, XPath2QueryParser, \
+from pyschematron.direct_mode.validators.queries.base import QueryParser, EvaluationContext
+from pyschematron.direct_mode.validators.queries.xpath_query_binding import XPath1QueryParser, XPath2QueryParser, \
     XPath3QueryParser, XPath31QueryParser, XPathEvaluationContext
 
 

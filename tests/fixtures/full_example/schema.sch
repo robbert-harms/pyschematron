@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schema xmlns="http://purl.oclc.org/dsdl/schematron"
         schemaVersion="iso"
+        defaultPhase="check-weights"
         queryBinding="xslt3"
         xml:lang="en">
 
@@ -17,6 +18,8 @@
     <!-- Showcasing pattern with external extends -->
     <pattern id="pa_check-weights">
         <title>Weight check</title>
+        <let name="test-variable-in-pattern" value="42"/>
+        <let name="second-test-variable-in-pattern"><html xmlns="http://www.w3.org/1999/xhtml">info</html></let>
         <rule context="c:*[@type='vehicle']">
             <extends href="check_weights.sch"/>
         </rule>

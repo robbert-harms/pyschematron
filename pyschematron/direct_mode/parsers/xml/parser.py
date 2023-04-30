@@ -128,7 +128,8 @@ class ElementParser(metaclass=ABCMeta):
     @staticmethod
     def get_rich_content(element: _Element,
                          context: ParsingContext,
-                         parse_special: bool = True) -> list[str | ValueOf | Name]:
+                         parse_special: bool = True,
+                         remove_namespaces: bool = True) -> list[str | ValueOf | Name]:
         """Get the rich content of the provided node.
 
         Args:
@@ -136,6 +137,7 @@ class ElementParser(metaclass=ABCMeta):
             context: the parsing context
             parse_special: if set to True, we separate the strings and the special variables (ValueOf, Name).
                 If set to false we return only string contents.
+            remove_namespaces: if we want to remove the namespaces from the string rendered children
 
         Returns:
             A list of text and special item nodes. All rich content like <emph> and <b> are rendered as string content.
@@ -151,7 +153,7 @@ class ElementParser(metaclass=ABCMeta):
                 parser = context.parser_factory.get_parser('name')
                 content.append(parser.parse(child, context))
             else:
-                content.append(node_to_str(child))
+                content.append(node_to_str(child, remove_namespaces=remove_namespaces))
             content.append(child.tail)
 
         return [el for el in content if el]
@@ -422,7 +424,7 @@ class VariableParser(ElementParser):
         if 'value' in element.attrib:
             return QueryVariable(name=element.attrib['name'], value=Query(element.attrib['value']))
         else:
-            content = ''.join(self.get_rich_content(element, context, parse_special=False))
+            content = ''.join(self.get_rich_content(element, context, parse_special=False, remove_namespaces=False))
             return XMLVariable(name=element.attrib['name'], value=content)
 
 

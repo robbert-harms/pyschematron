@@ -3,13 +3,17 @@ __date__ = '2023-03-06'
 __maintainer__ = 'Robbert Harms'
 __email__ = 'robbert@altoida.com'
 
-from typing import Any, Mapping, Iterable
+from typing import Any, Mapping, Iterable, Literal
 
 from abc import ABCMeta, abstractmethod
 
 from pyschematron.direct_mode.ast import SchematronASTNode, Schema, ConcretePattern, Rule, ExtendsExternal, \
-    ExternalRule, ConcreteRule, ExtendsById, AbstractRule, AbstractPattern, InstancePattern
+    ExternalRule, ConcreteRule, ExtendsById, AbstractRule, AbstractPattern, InstancePattern, Pattern, Phase, Check, \
+    Variable, Query, QueryVariable, XMLVariable
 from pyschematron.direct_mode.lib.utils import macro_expand
+from pyschematron.direct_mode.validators.bound_schema import BoundSchema, BoundSchemaNode, BoundPattern, BoundRule, \
+    BoundQuery, BoundCheck, BoundQueryVariable, BoundXMLVariable
+from pyschematron.direct_mode.validators.queries.base import QueryParser
 
 
 class ASTVisitor(metaclass=ABCMeta):
@@ -21,29 +25,19 @@ class ASTVisitor(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def visit(self, ast_node: SchematronASTNode) -> None:
+    def visit(self, ast_node: SchematronASTNode) -> Any:
         """Visit the AST node.
 
         This uses dynamic dispatch to accept all types of Schematron AST nodes.
 
+        Since Python allows polymorphic return values, we allow the visitor pattern to return values.
+
         Args:
             ast_node: an AST node of any type
+
+        Returns:
+            The result of the visitor.
         """
-
-
-class ASTVisitorWithResult(ASTVisitor, metaclass=ABCMeta):
-    __slots__ = ['_result']
-
-    def __init__(self):
-        """A specialized AST visitor which support return values.
-
-        The typical use of this visitor is with recursion on which a new visitor object of the same type
-        is created for every new return value.
-        """
-        self._result = None
-
-    def visit(self, ast_node: SchematronASTNode) -> None:
-        self._result = self._visit(ast_node)
 
     def apply(self, ast_node: SchematronASTNode) -> Any:
         """Convenience method to apply this visitor on the indicated node and get the result value.
@@ -54,32 +48,10 @@ class ASTVisitorWithResult(ASTVisitor, metaclass=ABCMeta):
         Returns:
             The result value from :meth:`get_result`
         """
-        ast_node.accept_visitor(self)
-        return self.get_result()
-
-    def get_result(self) -> Any:
-        """Get the result of applying this visitor.
-
-        Returns:
-            Generic return value, typically an AST node or a list of AST nodes.
-        """
-        return self._result
-
-    @abstractmethod
-    def _visit(self, ast_node: SchematronASTNode) -> Any:
-        """Visit the indicated node and return a return value.
-
-        Args:
-            ast_node: the node to visit
-
-        Returns:
-            Any value you wish to return. Note that this visitor may be called multiple times for
-                different nodes.
-        """
+        return ast_node.accept_visitor(self)
 
 
-class FindIdVisitor(ASTVisitorWithResult):
-    __slots__ = ['_id_ref']
+class FindIdVisitor(ASTVisitor):
 
     def __init__(self, id_ref: str):
         """A visitor which finds a node with the given ID.
@@ -90,25 +62,25 @@ class FindIdVisitor(ASTVisitorWithResult):
         super().__init__()
         self._id_ref = id_ref
 
-    def _visit(self, ast_node: SchematronASTNode) -> SchematronASTNode | None:
+    def visit(self, ast_node: SchematronASTNode) -> Any:
         if hasattr(ast_node, 'id') and getattr(ast_node, 'id') == self._id_ref:
             return ast_node
 
         for child in ast_node.get_children():
-            if found_node := FindIdVisitor(self._id_ref).apply(child):
+            if found_node := self.visit(child):
                 return found_node
 
 
-class GetIDMapping(ASTVisitorWithResult):
-    __slots__ = ['_result']
+class GetIDMappingVisitor(ASTVisitor):
 
     def __init__(self):
         """A visitor which maps all nodes with an id to their id."""
         super().__init__()
         self._result = {}
 
-    def visit(self, ast_node: SchematronASTNode) -> None:
-        self._result.update(self._visit(ast_node))
+    def visit(self, ast_node: SchematronASTNode) -> Any:
+        self._result |= self._visit(ast_node)
+        return self._result
 
     def _visit(self, ast_node: SchematronASTNode) -> dict[str, SchematronASTNode]:
         for child in ast_node.get_children():
@@ -120,8 +92,7 @@ class GetIDMapping(ASTVisitorWithResult):
         return {}
 
 
-class ResolveExtendsVisitor(ASTVisitorWithResult):
-    __slots__ = ['_schema']
+class ResolveExtendsVisitor(ASTVisitor):
 
     def __init__(self, schema: Schema):
         """Simplify an AST Schema by inlining all the extends in the rules.
@@ -135,7 +106,7 @@ class ResolveExtendsVisitor(ASTVisitorWithResult):
         super().__init__()
         self._schema = schema
 
-    def _visit(self, ast_node: SchematronASTNode) -> SchematronASTNode:
+    def visit(self, ast_node: SchematronASTNode) -> SchematronASTNode:
         match ast_node:
             case Schema():
                 return self._process_schema(ast_node)
@@ -226,8 +197,7 @@ class ResolveExtendsVisitor(ASTVisitorWithResult):
         return ResolveExtendsVisitor(self._schema).apply(extends.rule)
 
 
-class ResolveAbstractPatternsVisitor(ASTVisitorWithResult):
-    __slots__ = ['_schema']
+class ResolveAbstractPatternsVisitor(ASTVisitor):
 
     def __init__(self, schema: Schema):
         """Simplify an AST Schema by expanding all the instance-of patterns.
@@ -241,7 +211,7 @@ class ResolveAbstractPatternsVisitor(ASTVisitorWithResult):
         super().__init__()
         self._schema = schema
 
-    def _visit(self, ast_node: SchematronASTNode) -> SchematronASTNode:
+    def visit(self, ast_node: SchematronASTNode) -> SchematronASTNode:
         match ast_node:
             case Schema():
                 return self._process_schema(ast_node)
@@ -286,8 +256,7 @@ class ResolveAbstractPatternsVisitor(ASTVisitorWithResult):
         return macro_expand_visitor.apply(abstract_pattern)
 
 
-class MacroExpandVisitor(ASTVisitorWithResult):
-    __slots__ = ['_macro_expansions']
+class MacroExpandVisitor(ASTVisitor):
 
     def __init__(self, macro_expansions: dict[str, str]):
         """Macro expand an abstract pattern.
@@ -301,7 +270,7 @@ class MacroExpandVisitor(ASTVisitorWithResult):
         super().__init__()
         self._macro_expansions = macro_expansions
 
-    def _visit(self, ast_node: SchematronASTNode) -> SchematronASTNode:
+    def visit(self, ast_node: SchematronASTNode) -> SchematronASTNode:
         if isinstance(ast_node, AbstractPattern):
             expanded_pattern = self._visit_generic_node(ast_node)
             return ConcretePattern(**expanded_pattern.get_init_values())
@@ -337,3 +306,230 @@ class MacroExpandVisitor(ASTVisitorWithResult):
             updated_items[key] = _expand_value(value)
 
         return ast_node.with_updated(**updated_items)
+
+
+class PhaseSelectionVisitor(ASTVisitor):
+
+    def __init__(self, schema: Schema, phase: str | Literal['#ALL', '#DEFAULT'] | None = None):
+        """Reduce an AST to only those patterns and phases referenced by a specific phase.
+
+        This visitor only works on concrete Schema AST trees, we assume all abstract rules and patterns to be resolved.
+
+        The output limits the `patterns` in the AST to only those selected by the phase.
+        It will also limit the `phases` to the active phase, or to an empty list if no phase was specified.
+
+        Args:
+            schema: the full Schema as input to lookup all the rules by ID.
+            phase: the phase we want to select, can be an IDREF of a phase node, the literal `#ALL` for all patterns,
+                or `#DEFAULT` for the `defaultPhase` attribute of the Schematron. The default value is `#DEFAULT`,
+                it is overwritten by the attribute `defaultPhase`, which again can be overwritten by the phase
+                here specified.
+        """
+        super().__init__()
+        self._schema = schema
+        self._phase = phase
+        self._phase_node = self._get_phase_node(schema, phase)
+
+        self._active_pattern_ids = None
+        if self._phase_node:
+            self._active_pattern_ids = [active_phase.pattern_id for active_phase in self._phase_node.active]
+
+    def visit(self, ast_node: SchematronASTNode) -> SchematronASTNode | bool:
+        match ast_node:
+            case Schema():
+                return self._process_schema(ast_node)
+            case Pattern():
+                return self._process_pattern(ast_node)
+            case Phase():
+                return self._process_phase(ast_node)
+            case _:
+                return ast_node
+
+    def _process_schema(self, schema: Schema) -> Schema:
+        """Process a Schema by reducing the patterns and phases to the specified set.
+
+        Args:
+            schema: the schema to process
+
+        Returns:
+            A processed schema
+        """
+        patterns = [pattern for pattern in schema.patterns if self.apply(pattern)]
+        phases = [phase for phase in schema.phases if self.apply(phase)]
+        return schema.with_updated(patterns=patterns, phases=phases)
+
+    def _process_pattern(self, pattern: Pattern) -> bool:
+        """Process a pattern by verifying if it is in the current phase.
+
+        Args:
+            pattern: the pattern to process
+
+        Returns:
+            A boolean indicating if this pattern is in the current phase or not.
+        """
+        if not isinstance(pattern, ConcretePattern):
+            raise ValueError('This visitor can only deal with concrete patterns.')
+
+        return self._active_pattern_ids is None or pattern.id in self._active_pattern_ids
+
+    def _process_phase(self, phase: Phase) -> bool:
+        """Process a phase node by verifying if it is in the current phase.
+
+        Args:
+            phase: the phase to process
+
+        Returns:
+            A boolean indicating if this phase is in the current phase or not
+        """
+        return self._phase_node is None or phase.id == self._phase_node.id
+
+    def _get_phase_node(self, schema: Schema, phase: str | Literal['#ALL', '#DEFAULT'] | None = None) -> Phase | None:
+        """Get the phase node associated with the elected phase, or None if None found.
+
+        Args:
+            schema: the schema we want to search
+            phase: the chosen phase.
+
+        Returns:
+            The AST phase node, or None if not applicable / not found.
+        """
+        if phase is None:
+            phase = '#DEFAULT'
+
+        if phase == '#ALL':
+            return None
+
+        if phase == '#DEFAULT':
+            phase = schema.default_phase
+
+        if isinstance(phase, str):
+            phase_node = FindIdVisitor(phase).apply(self._schema)
+
+            if phase_node is None:
+                raise ValueError(f'Can not find the phase "{phase}".')
+            return phase_node
+
+        return None
+
+
+class QueryBindingVisitor(ASTVisitor):
+
+    def __init__(self, query_parser: QueryParser):
+        """Convert an AST to a BoundSchema.
+
+        This applies the provided query parser to the queries in an AST and create BoundSchemaNode objects.
+
+        This visitor only works on concrete Schema AST trees, we assume all abstract rules and patterns to be resolved.
+
+        Args:
+            query_parser: the query parser we would like to apply
+        """
+        super().__init__()
+        self._query_parser = query_parser
+
+    def visit(self, ast_node: SchematronASTNode) -> BoundSchemaNode | SchematronASTNode:
+        """Visit the indicated AST node and return a bound node if applicable."""
+        match ast_node:
+            case Schema():
+                return self._process_schema(ast_node)
+            case ConcretePattern():
+                return self._process_pattern(ast_node)
+            case ConcreteRule():
+                return self._process_rule(ast_node)
+            case Check():
+                return self._process_check(ast_node)
+            case QueryVariable():
+                return self._process_query_variable(ast_node)
+            case XMLVariable():
+                return self._process_xml_variable(ast_node)
+            # todo finish
+            case Query():
+                return self._process_query(ast_node)
+            case _:
+                raise ValueError(f'Unknown node being processed "{type(ast_node)}".')
+
+    def _process_schema(self, schema: Schema) -> BoundSchema:
+        """Convert a Schema to a BoundSchema.
+
+        Args:
+            schema: the schema to process
+
+        Returns:
+            A QBL bound Schema
+        """
+        patterns = [self.apply(pattern) for pattern in schema.patterns]
+        return BoundSchema(schema, patterns)
+
+    def _process_pattern(self, pattern: ConcretePattern) -> BoundPattern:
+        """Convert a Pattern to a BoundPattern.
+
+        Args:
+            pattern: the pattern to process
+
+        Returns:
+            A QBL bound Pattern
+        """
+        rules = [self.apply(rule) for rule in pattern.rules]
+        variables = [self.apply(variable) for variable in pattern.variables]
+        return BoundPattern(pattern, rules, variables)
+
+    def _process_rule(self, rule: ConcreteRule) -> BoundRule:
+        """Convert a concrete rule to a BoundRule.
+
+        Args:
+            rule: the rule to process
+
+        Returns:
+            A QBL bound rule.
+        """
+        checks = [self.apply(check) for check in rule.checks]
+        variables = [self.apply(variable) for variable in rule.variables]
+        subject = self.apply(rule.subject) if rule.subject else None
+        return BoundRule(rule, self.apply(rule.context), checks, variables, subject)
+
+    def _process_check(self, check: Check) -> BoundCheck:
+        """Convert a Check to a BoundCheck.
+
+        Args:
+            check: the check to process
+
+        Returns:
+            A QBL bound check.
+        """
+        subject = self.apply(check.subject) if check.subject else None
+        return BoundCheck(check, self.apply(check.test), subject)
+
+    def _process_query_variable(self, query_variable: QueryVariable) -> BoundQueryVariable:
+        """Convert a query variable to a bound query variable.
+
+        Args:
+            query_variable: the QueryVariable to process
+
+        Returns:
+            A QBL bound variable.
+        """
+        return BoundQueryVariable(query_variable, self.apply(query_variable.value))
+
+    def _process_xml_variable(self, xml_variable: XMLVariable) -> BoundXMLVariable:
+        """Convert an XML variable to a bound XML variable.
+
+        Args:
+            xml_variable: the xml variable to process
+
+        Returns:
+            A QBL bound variable.
+        """
+        return BoundXMLVariable(xml_variable, xml_variable.value)
+
+    def _process_query(self, query: Query) -> BoundQuery:
+        """Convert a Query AST node to a BoundQuery.
+
+        This uses the query parser to parse the query inside the Query AST node.
+
+        Args:
+            query: the query AST node to process
+
+        Returns:
+            A bound query
+        """
+        return BoundQuery(query, self._query_parser.parse(query.query))

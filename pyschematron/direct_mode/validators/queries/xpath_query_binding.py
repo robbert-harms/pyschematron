@@ -22,22 +22,11 @@ from elementpath.xpath31 import XPath31Parser
 from elementpath.xpath_context import ItemArgType
 from elementpath.tree_builders import RootArgType
 
-from pyschematron.direct_mode.processor.queries.base import QueryParser, Query, EvaluationContext
-from pyschematron.direct_mode.processor.queries.exceptions import MissingRootNodeError
+from pyschematron.direct_mode.validators.queries.base import QueryParser, Query, EvaluationContext
+from pyschematron.direct_mode.validators.queries.exceptions import MissingRootNodeError
 
 
 class XPathQueryParser(QueryParser, metaclass=ABCMeta):
-
-    @abstractmethod
-    def with_namespaces(self, namespaces: dict[str, str]) -> XPathQueryParser:
-        """Create a copy of this XPath query parser with updated namespaces.
-
-        Args:
-            namespaces: a dictionary mapping namespace prefixes to URIs.
-
-        Returns:
-            An updated XPath Query Parser
-        """
 
     @abstractmethod
     def with_custom_function(self, custom_function: CustomXPathFunction) -> XPathQueryParser:

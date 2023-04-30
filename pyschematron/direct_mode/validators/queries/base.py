@@ -26,6 +26,17 @@ class QueryParser(metaclass=ABCMeta):
             A parsed expression in the language supported by this parser.
         """
 
+    @abstractmethod
+    def with_namespaces(self, namespaces: dict[str, str]) -> QueryParser:
+        """Create a copy of this query parser with updated namespaces.
+
+        Args:
+            namespaces: a dictionary mapping namespace prefixes to URIs.
+
+        Returns:
+            An updated Query Parser.
+        """
+
 
 class EvaluationContext(metaclass=ABCMeta):
     """Representation of the context required when evaluating a Query.

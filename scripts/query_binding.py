@@ -10,8 +10,8 @@ import elementpath
 import lxml.etree as etree
 from elementpath.xpath3 import XPath3Parser
 
-from pyschematron.direct_mode.processor.queries.factories import QueryBindingFactory, DefaultQueryBindingFactory
-from pyschematron.direct_mode.processor.queries.xpath_query_binding import XPathQueryParser, XPath2QueryParser, \
+from pyschematron.direct_mode.validators.queries.factories import QueryBindingFactory, DefaultQueryBindingFactory
+from pyschematron.direct_mode.validators.queries.xpath_query_binding import XPathQueryParser, XPath2QueryParser, \
     XPathEvaluationContext, SimpleCustomXPathFunction
 
 xml = etree.fromstring('''

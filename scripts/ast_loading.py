@@ -6,10 +6,8 @@ __email__ = 'robbert@altoida.com'
 import sys
 from io import StringIO
 from pathlib import Path
-from pprint import pprint
 
-from pyschematron.direct_mode.lib.ast_visitors import ResolveExtendsVisitor, FindIdVisitor, GetIDMapping, \
-    ResolveAbstractPatternsVisitor
+from pyschematron.direct_mode.lib.ast_visitors import ResolveExtendsVisitor, ResolveAbstractPatternsVisitor
 from pyschematron.direct_mode.lib.ast_yaml import ASTYaml
 from pyschematron.direct_mode.parsers.xml.parser import ParsingContext, SchemaParser
 from pyschematron.utils import load_xml

@@ -25,13 +25,18 @@ if TYPE_CHECKING:
 class SchematronASTNode:
     """Base class for all Schematron AST nodes."""
 
-    def accept_visitor(self, visitor: ASTVisitor) -> None:
+    def accept_visitor(self, visitor: ASTVisitor) -> Any:
         """Accept a visitor on this node.
+
+        Since Python allows polymorphic return values, we allow the visitor pattern to return values.
 
         Args:
             visitor: the visitor we accept and call
+
+        Returns:
+            The result of the visitor.
         """
-        visitor.visit(self)
+        return visitor.visit(self)
 
     def get_init_values(self) -> dict[str, Any]:
         """Get the initialisation values with which this class was instantiated.
@@ -52,9 +57,7 @@ class SchematronASTNode:
         Returns:
             A new copy of this node with the relevant items updated.
         """
-        init_values = self.get_init_values()
-        init_values.update(**updated_items)
-        return type(self)(**init_values)
+        return type(self)(**(self.get_init_values() | updated_items))
 
     def get_children(self) -> list[SchematronASTNode]:
         """Get a list of all the AST nodes in this node.
@@ -420,7 +423,6 @@ class Check(SchematronASTNode):
         test: the attribute with the test condition
         content: the mixed text content, can contain `<emph>`, `<span>`, `<dir>`,
             `<value-of>`, and `<name>` as flat text.
-
         diagnostics: list of IDs referencing a diagnostic elements
         flag: name of the flag to which this test belongs, is set to True when this test is fired
         fpi: formal public identifier, a system-independent ID of this test
@@ -522,12 +524,6 @@ class Title(SchematronASTNode):
 
 
 @dataclass(slots=True, frozen=True)
-class Query(SchematronASTNode):
-    """Representation of a Query used in the Schematron AST nodes"""
-    query: str
-
-
-@dataclass(slots=True, frozen=True)
 class ValueOf(SchematronASTNode):
     """Representation of a `<value-of>` node."""
     select: Query
@@ -538,3 +534,8 @@ class Name(SchematronASTNode):
     """Representation of a `<name>` node."""
     path: Query | None = None
 
+
+@dataclass(slots=True, frozen=True)
+class Query(SchematronASTNode):
+    """Representation of a Query used in the Schematron AST nodes"""
+    query: str

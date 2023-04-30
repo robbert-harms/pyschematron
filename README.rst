@@ -9,10 +9,10 @@ If the XML you wish to validate passes all the Schematron assertions,
 your XML is considered valid according to the Schematron schema.
 
 There are various versions of Schematron available.
-This library only supports the latest version of Schematron, `ISO/IEC 19757-3:2020 <https://www.iso.org/standard/74515.html>`_, although with a few limitations (see below).
+This library only supports the latest version of Schematron, `ISO/IEC 19757-3:2020 <https://www.iso.org/standard/74515.html>`_, with a few limitations (see below).
 
 Currently, this library only supports a pure Python mode of Schematron validation.
-In this pure Python mode we load the Schematron into an internal representation and apply that on an XML.
+In this pure Python mode we load the Schematron into an internal representation and apply that to an XML.
 The advantage of direct evaluation is that it offers superior performance compared to an XSLT
 transformation based evaluation.
 The disadvantage is that it only supports XPath expressions and does not support XSLT functions.
@@ -79,7 +79,9 @@ When applied to a document, the direct mode evaluation follows this procedure to
 Custom functions
 ----------------
 In direct mode evaluation, custom XSLT functions in your Schematron (`<xsl:function>`) are not supported.
-Custom Python functions are also not supported due to a lack of support in the elementpath library (as of Jan. 2023).
+
+Custom Python functions are supported when using the `xslt2`, `xslt3`, `xpath2`, `xpath3`, or `xpath31` query binding languages.
+This uses the external function support in the `elementpath` library.
 
 
 Compliance
