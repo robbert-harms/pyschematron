@@ -10,20 +10,20 @@ import elementpath
 import lxml.etree as etree
 from elementpath.xpath3 import XPath3Parser
 
-from pyschematron.direct_mode.validators.queries.factories import QueryBindingFactory, DefaultQueryBindingFactory
-from pyschematron.direct_mode.validators.queries.xpath_query_binding import XPathQueryParser, XPath2QueryParser, \
+from pyschematron.direct_mode.validators.queries.factories import SimpleQueryProcessorFactory
+from pyschematron.direct_mode.validators.queries.xpath import XPathQueryParser, XPath2QueryParser, \
     XPathEvaluationContext, SimpleCustomXPathFunction
 
 xml = etree.fromstring('''
 <html>
-    <head></head>
+    <head id="test"></head>
     <body>
         <p>Test</p>
     </body>
 </html>
 ''')
 
-query_processing_factory = DefaultQueryBindingFactory().get_query_processing_factory('xslt3')
+query_processing_factory = SimpleQueryProcessorFactory().get_query_processor('xslt3')
 
 parser = query_processing_factory.get_query_parser()
 parser = parser.with_namespaces({'test': 'http://test.com'})
@@ -33,10 +33,21 @@ evaluation_context = query_processing_factory.get_evaluation_context()
 evaluation_context = evaluation_context.with_namespaces({'c': 'http://www.amazing-cargo.com/xml/data/2023'})
 evaluation_context = evaluation_context.with_xml_root(xml)
 evaluation_context = evaluation_context.with_variables({'test': 100})
-
+evaluation_context = evaluation_context.with_variables(
+    {'test2': '<html xmlns="http://www.w3.org/1999/xhtml">info</html>'})
 
 query = parser.parse('test:mult($test * count(//html/*))')
 print(query.evaluate(evaluation_context))
+
+print('test2', parser.parse('$test2').evaluate(evaluation_context))
+
+query = parser.parse('@id')
+sub_context = evaluation_context.with_xml_root(parser.parse('/html/head').evaluate(evaluation_context)[0])
+print(query.evaluate(sub_context))
+
+query = parser.parse('@id')
+sub_context = evaluation_context.with_xml_root(parser.parse('/html/body').evaluate(evaluation_context)[0])
+print(query.evaluate(sub_context))
 
 # context.add_variables({'max-weight': 'xs:integer(1000)')
 

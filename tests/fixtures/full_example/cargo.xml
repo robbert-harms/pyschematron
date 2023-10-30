@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?xml-model href="schema.sch" type="application/xml" schematypens="http://purl.oclc.org/dsdl/schematron"?>
 <cargo xmlns="http://www.amazing-cargo.com/xml/data/2023" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-    <vehicles>
+    <!-- This is a comment -->
+    <!-- Comment: better comment -->
+    <vehicles id="testable_id">
         <car weight="5000" volume="20" type="vehicle" />
         <apple weight="1" volume="1" type="fruit" />
     </vehicles>
-    <fruits>
+    <fruits id="id_test">
         <banana weight="1" volume="500" type="fruit" />
         <motorcycle weight="100" volume="1" type="vehicle" />
     </fruits>
 </cargo>
+

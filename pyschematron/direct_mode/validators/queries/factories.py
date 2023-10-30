@@ -8,39 +8,52 @@ __licence__ = 'GPL v3'
 
 from abc import ABCMeta, abstractmethod
 
-from pyschematron.direct_mode.validators.queries.base import QueryParser, EvaluationContext
-from pyschematron.direct_mode.validators.queries.xpath_query_binding import XPath1QueryParser, XPath2QueryParser, \
+from pyschematron.direct_mode.ast import Schema
+from pyschematron.direct_mode.validators.queries.base import QueryProcessor, SimpleQueryProcessor
+from pyschematron.direct_mode.validators.queries.xpath import XPath1QueryParser, XPath2QueryParser, \
     XPath3QueryParser, XPath31QueryParser, XPathEvaluationContext
 
 
-class QueryBindingFactory(metaclass=ABCMeta):
-    """Base class for query binding factories.
+class QueryProcessorFactory(metaclass=ABCMeta):
+    """Query processor factories can construct QueryProcessor classes specific to your query binding language.
 
     In Schematron, the queryBinding attribute determines which query language is used. This factory
-    allows you to get the right query factory for your query binding language.
-
-    This is part of the `abstract factory` design pattern. This factory generates factories to create the
-    query parser and evaluation context specialized to a specific query binding.
+    allows you to get the right query processor for your query binding language.
     """
 
     @abstractmethod
-    def get_query_processing_factory(self, query_binding: str) -> QueryProcessingFactory:
-        """Get the factory you can use to get the query parser and evaluation context for your query binding.
-
-        The first factory (this one) allows you to generate specialized factories for specific query bindings.
+    def get_query_processor(self, query_binding: str) -> QueryProcessor:
+        """Get the processor you can use for this query binding language.
 
         Args:
             query_binding: the query binding for which we want to get a parser.
 
         Returns:
-            A query processing factory specialized for this query binding language.
+            A query processor specialized for this query binding language.
 
         Raises:
-            ValueError: if no query processing factory could be found for the indicated query binding.
+            ValueError: if no query processor could be found for the indicated query binding.
+        """
+
+    @abstractmethod
+    def get_schema_query_processor(self, schema: Schema) -> QueryProcessor:
+        """Get the processor you can use for this schema.
+
+        Not only will this select the right query binding, it will also load the namespaces.
+
+        Args:
+            schema: the Schema for which we want to get a query processor.
+
+        Returns:
+            A query processor specialized for this Schema, with the right query binding language and
+                the namespaces loaded.
+
+        Raises:
+            ValueError: if no query processor could be found for this Schema.
         """
 
 
-class DefaultQueryBindingFactory(QueryBindingFactory):
+class SimpleQueryProcessorFactory(QueryProcessorFactory):
 
     def __init__(self):
         """The default query binding factory.
@@ -67,52 +80,17 @@ class DefaultQueryBindingFactory(QueryBindingFactory):
             'xpath31': XPathEvaluationContext()
         }
 
-    def get_query_processing_factory(self, query_binding: str) -> QueryProcessingFactory:
+    def get_query_processor(self, query_binding: str) -> QueryProcessor:
         try:
             parser = self._parsers[query_binding]
             context = self._contexts[query_binding]
-            return SimpleQueryProcessingFactory(parser, context)
+            return SimpleQueryProcessor(parser, context)
         except KeyError:
             raise ValueError(f'No parser could be found for the query binding "{query_binding}".')
 
+    def get_schema_query_processor(self, schema: Schema) -> QueryProcessor:
+        query_binding = schema.query_binding or 'xslt'
+        namespaces = {ns.prefix: ns.uri for ns in schema.namespaces}
 
-class QueryProcessingFactory(metaclass=ABCMeta):
-    """Specialized query processing factory.
-
-    This provides you with a query parser and evaluation context which match with each other.
-    """
-
-    @abstractmethod
-    def get_query_parser(self) -> QueryParser:
-        """Get the query parser for the bound query binding.
-
-        Returns:
-            A query parser to parse queries in the Schematron
-        """
-
-    @abstractmethod
-    def get_evaluation_context(self) -> EvaluationContext:
-        """Get the evaluation context for the bound query binding.
-
-        Returns:
-            An evaluation context to evaluate the parsed queries.
-        """
-
-
-class SimpleQueryProcessingFactory(QueryProcessingFactory):
-
-    def __init__(self, query_parser: QueryParser, evaluation_context: EvaluationContext):
-        """Simple query processing factory specialized to a specific query parser and evaluation context.
-
-        Args:
-            query_parser: the query parser this instance specialize in
-            evaluation_context: the evaluation context this instance specializes in
-        """
-        self._query_parser = query_parser
-        self._evaluation_context = evaluation_context
-
-    def get_query_parser(self) -> QueryParser:
-        return self._query_parser
-
-    def get_evaluation_context(self) -> EvaluationContext:
-        return self._evaluation_context
+        processor = self.get_query_processor(query_binding)
+        return processor.with_namespaces(namespaces)

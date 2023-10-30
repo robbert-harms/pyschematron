@@ -3,17 +3,13 @@ __date__ = '2023-03-06'
 __maintainer__ = 'Robbert Harms'
 __email__ = 'robbert@altoida.com'
 
-from typing import Any, Mapping, Iterable, Literal
+from typing import Any, Mapping, Iterable, Literal, Type
 
 from abc import ABCMeta, abstractmethod
 
 from pyschematron.direct_mode.ast import SchematronASTNode, Schema, ConcretePattern, Rule, ExtendsExternal, \
-    ExternalRule, ConcreteRule, ExtendsById, AbstractRule, AbstractPattern, InstancePattern, Pattern, Phase, Check, \
-    Variable, Query, QueryVariable, XMLVariable
+    ExternalRule, ConcreteRule, ExtendsById, AbstractRule, AbstractPattern, InstancePattern, Pattern, Phase
 from pyschematron.direct_mode.lib.utils import macro_expand
-from pyschematron.direct_mode.validators.bound_schema import BoundSchema, BoundSchemaNode, BoundPattern, BoundRule, \
-    BoundQuery, BoundCheck, BoundQueryVariable, BoundXMLVariable
-from pyschematron.direct_mode.validators.queries.base import QueryParser
 
 
 class ASTVisitor(metaclass=ABCMeta):
@@ -90,6 +86,28 @@ class GetIDMappingVisitor(ASTVisitor):
             if (node_id := getattr(ast_node, 'id')) is not None:
                 return {node_id: ast_node}
         return {}
+
+
+class GetNodesOfTypeVisitor(ASTVisitor):
+
+    def __init__(self, types: Type[SchematronASTNode] | tuple[Type[SchematronASTNode], ...]):
+        """A visitor which checks each node for their type against the type(s) provided
+
+        Args:
+            types: a single type or a tuple of types we check each node against.
+        """
+        super().__init__()
+        self._types = types
+        self._result = []
+
+    def visit(self, ast_node: SchematronASTNode) -> Any:
+        for child in ast_node.get_children():
+            child.accept_visitor(self)
+
+        if isinstance(ast_node, self._types):
+            self._result.append(ast_node)
+
+        return self._result
 
 
 class ResolveExtendsVisitor(ASTVisitor):
@@ -410,126 +428,3 @@ class PhaseSelectionVisitor(ASTVisitor):
             return phase_node
 
         return None
-
-
-class QueryBindingVisitor(ASTVisitor):
-
-    def __init__(self, query_parser: QueryParser):
-        """Convert an AST to a BoundSchema.
-
-        This applies the provided query parser to the queries in an AST and create BoundSchemaNode objects.
-
-        This visitor only works on concrete Schema AST trees, we assume all abstract rules and patterns to be resolved.
-
-        Args:
-            query_parser: the query parser we would like to apply
-        """
-        super().__init__()
-        self._query_parser = query_parser
-
-    def visit(self, ast_node: SchematronASTNode) -> BoundSchemaNode | SchematronASTNode:
-        """Visit the indicated AST node and return a bound node if applicable."""
-        match ast_node:
-            case Schema():
-                return self._process_schema(ast_node)
-            case ConcretePattern():
-                return self._process_pattern(ast_node)
-            case ConcreteRule():
-                return self._process_rule(ast_node)
-            case Check():
-                return self._process_check(ast_node)
-            case QueryVariable():
-                return self._process_query_variable(ast_node)
-            case XMLVariable():
-                return self._process_xml_variable(ast_node)
-            # todo finish
-            case Query():
-                return self._process_query(ast_node)
-            case _:
-                raise ValueError(f'Unknown node being processed "{type(ast_node)}".')
-
-    def _process_schema(self, schema: Schema) -> BoundSchema:
-        """Convert a Schema to a BoundSchema.
-
-        Args:
-            schema: the schema to process
-
-        Returns:
-            A QBL bound Schema
-        """
-        patterns = [self.apply(pattern) for pattern in schema.patterns]
-        return BoundSchema(schema, patterns)
-
-    def _process_pattern(self, pattern: ConcretePattern) -> BoundPattern:
-        """Convert a Pattern to a BoundPattern.
-
-        Args:
-            pattern: the pattern to process
-
-        Returns:
-            A QBL bound Pattern
-        """
-        rules = [self.apply(rule) for rule in pattern.rules]
-        variables = [self.apply(variable) for variable in pattern.variables]
-        return BoundPattern(pattern, rules, variables)
-
-    def _process_rule(self, rule: ConcreteRule) -> BoundRule:
-        """Convert a concrete rule to a BoundRule.
-
-        Args:
-            rule: the rule to process
-
-        Returns:
-            A QBL bound rule.
-        """
-        checks = [self.apply(check) for check in rule.checks]
-        variables = [self.apply(variable) for variable in rule.variables]
-        subject = self.apply(rule.subject) if rule.subject else None
-        return BoundRule(rule, self.apply(rule.context), checks, variables, subject)
-
-    def _process_check(self, check: Check) -> BoundCheck:
-        """Convert a Check to a BoundCheck.
-
-        Args:
-            check: the check to process
-
-        Returns:
-            A QBL bound check.
-        """
-        subject = self.apply(check.subject) if check.subject else None
-        return BoundCheck(check, self.apply(check.test), subject)
-
-    def _process_query_variable(self, query_variable: QueryVariable) -> BoundQueryVariable:
-        """Convert a query variable to a bound query variable.
-
-        Args:
-            query_variable: the QueryVariable to process
-
-        Returns:
-            A QBL bound variable.
-        """
-        return BoundQueryVariable(query_variable, self.apply(query_variable.value))
-
-    def _process_xml_variable(self, xml_variable: XMLVariable) -> BoundXMLVariable:
-        """Convert an XML variable to a bound XML variable.
-
-        Args:
-            xml_variable: the xml variable to process
-
-        Returns:
-            A QBL bound variable.
-        """
-        return BoundXMLVariable(xml_variable, xml_variable.value)
-
-    def _process_query(self, query: Query) -> BoundQuery:
-        """Convert a Query AST node to a BoundQuery.
-
-        This uses the query parser to parse the query inside the Query AST node.
-
-        Args:
-            query: the query AST node to process
-
-        Returns:
-            A bound query
-        """
-        return BoundQuery(query, self._query_parser.parse(query.query))

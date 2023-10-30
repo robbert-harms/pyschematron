@@ -142,9 +142,9 @@ class XPathEvaluationContext(EvaluationContext):
         super().__init__()
         self._context_variables = {
             'root': root,
-            'namespaces': namespaces,
+            'namespaces': namespaces or {},
             'item': item,
-            'variables': variables
+            'variables': variables or {}
         }
 
         self._xpath_context = None
@@ -166,14 +166,24 @@ class XPathEvaluationContext(EvaluationContext):
             raise MissingRootNodeError('Missing root node in XPath context, please set a root node first.')
         return self._xpath_context
 
+    def with_context_item(self, xml_item: ItemArgType) -> EvaluationContext:
+        if xml_item is self._context_variables['item']:
+            return self
+        return self._get_updated({'item': xml_item})
+
     def with_xml_root(self, xml_root: RootArgType) -> XPathEvaluationContext:
+        if xml_root is self._context_variables['root']:
+            return self
         return self._get_updated({'root': xml_root})
 
     def with_namespaces(self, namespaces: dict[str, str]) -> XPathEvaluationContext:
         return self._get_updated({'namespaces': namespaces})
 
-    def with_variables(self, variables: dict[str, str]) -> XPathEvaluationContext:
-        return self._get_updated({'variables': variables})
+    def with_variables(self, variables: dict[str, Any], overwrite: bool = False) -> EvaluationContext:
+        if overwrite:
+            return self._get_updated({'variables': variables})
+        else:
+            return self._get_updated({'variables': self._context_variables['variables'] | variables})
 
     def _get_updated(self, updates: dict[str, Any]) -> XPathEvaluationContext:
         kwargs = self._context_variables.copy()

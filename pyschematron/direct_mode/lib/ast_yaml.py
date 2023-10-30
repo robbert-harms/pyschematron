@@ -5,7 +5,6 @@ __email__ = 'robbert@altoida.com'
 
 import dataclasses
 import inspect
-import sys
 from abc import ABCMeta, abstractmethod
 from pathlib import PosixPath
 from typing import Callable, Any, Type

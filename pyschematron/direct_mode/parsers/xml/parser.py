@@ -11,7 +11,7 @@ from typing import Type
 import elementpath
 
 from lxml import etree
-from lxml.etree import _Element
+from lxml.etree import Element
 
 from pyschematron.direct_mode.ast import Schema, Check, Assert, SchematronASTNode, Pattern, Rule, Report, Variable, \
     Paragraph, ExtendsById, Extends, ExtendsExternal, ExternalRule, Query, QueryVariable, XMLVariable, \
@@ -20,7 +20,7 @@ from pyschematron.direct_mode.parsers.xml.builders import ConcreteRuleBuilder, E
     AbstractRuleBuilder, ConcretePatternBuilder, SchemaBuilder, AbstractPatternBuilder, \
     InstancePatternBuilder, PhaseBuilder
 from pyschematron.direct_mode.parsers.xml.utils import node_to_str, resolve_href, parse_attributes
-from pyschematron.utils import load_xml
+from pyschematron.utils import load_xml_document
 
 
 class ParserFactory(metaclass=ABCMeta):
@@ -100,7 +100,7 @@ class ParsingContext:
 class ElementParser(metaclass=ABCMeta):
 
     @abstractmethod
-    def parse(self, element: _Element, context: ParsingContext) -> SchematronASTNode:
+    def parse(self, element: Element, context: ParsingContext) -> SchematronASTNode:
         """Parse a piece of XML data into a SchematronASTNode.
 
         Args:
@@ -109,7 +109,7 @@ class ElementParser(metaclass=ABCMeta):
         """
 
     @staticmethod
-    def _parse_child_tags(element: _Element, context: ParsingContext, xml_tag: str) -> list[SchematronASTNode]:
+    def _parse_child_tags(element: Element, context: ParsingContext, xml_tag: str) -> list[SchematronASTNode]:
         """Parse a sequence of XML elements with the same tag name.
 
         Args:
@@ -126,7 +126,7 @@ class ElementParser(metaclass=ABCMeta):
         return items
 
     @staticmethod
-    def get_rich_content(element: _Element,
+    def get_rich_content(element: Element,
                          context: ParsingContext,
                          parse_special: bool = True,
                          remove_namespaces: bool = True) -> list[str | ValueOf | Name]:
@@ -162,7 +162,7 @@ class ElementParser(metaclass=ABCMeta):
 class SchemaParser(ElementParser):
     """Parse <schema> root tags"""
 
-    def parse(self, element: _Element, context: ParsingContext) -> Schema:
+    def parse(self, element: Element, context: ParsingContext) -> Schema:
         builder = SchemaBuilder()
         builder.add_attributes(element.attrib)
         builder.add_patterns(self._parse_child_tags(element, context, 'pattern'))
@@ -201,14 +201,14 @@ class SchemaParser(ElementParser):
 class NamespaceParser(ElementParser):
     """Parser for the `<ns>` tags."""
 
-    def parse(self, element: _Element, context: ParsingContext) -> Namespace:
+    def parse(self, element: Element, context: ParsingContext) -> Namespace:
         return Namespace(prefix=element.attrib['prefix'], uri=element.attrib['uri'])
 
 
 class NameParser(ElementParser):
     """Parser for the `<name>` tags."""
 
-    def parse(self, element: _Element, context: ParsingContext) -> Name:
+    def parse(self, element: Element, context: ParsingContext) -> Name:
         if element.attrib.get('path'):
             return Name(Query(element.attrib['path']))
         return Name()
@@ -217,21 +217,21 @@ class NameParser(ElementParser):
 class ValueOfParser(ElementParser):
     """Parser for the `<value-of>` tags."""
 
-    def parse(self, element: _Element, context: ParsingContext) -> ValueOf:
+    def parse(self, element: Element, context: ParsingContext) -> ValueOf:
         return ValueOf(Query(element.attrib['select']))
 
 
 class TitleParser(ElementParser):
     """Parser for the `<title>` tags."""
 
-    def parse(self, element: _Element, context: ParsingContext) -> Title:
+    def parse(self, element: Element, context: ParsingContext) -> Title:
         return Title(content=''.join(self.get_rich_content(element, context)))
 
 
 class PhaseParser(ElementParser):
     """Parser for the `<phase>` tags."""
 
-    def parse(self, element: _Element, context: ParsingContext) -> Phase:
+    def parse(self, element: Element, context: ParsingContext) -> Phase:
         builder = PhaseBuilder()
 
         builder.add_attributes(element.attrib)
@@ -254,7 +254,7 @@ class PhaseParser(ElementParser):
 class ActivePhaseParser(ElementParser):
     """Parser for the `<active>` tags."""
 
-    def parse(self, element: _Element, context: ParsingContext) -> ActivePhase:
+    def parse(self, element: Element, context: ParsingContext) -> ActivePhase:
         content_parts = self.get_rich_content(element, context, parse_special=False)
         content = None
         if len(content_parts):
@@ -266,7 +266,7 @@ class ActivePhaseParser(ElementParser):
 class DiagnosticsParser(ElementParser):
     """Parser for the `<diagnostics>` tags."""
 
-    def parse(self, element: _Element, context: ParsingContext) -> Diagnostics:
+    def parse(self, element: Element, context: ParsingContext) -> Diagnostics:
         diagnostics = []
         diagnostics.extend(self._parse_child_tags(element, context, 'diagnostic'))
 
@@ -279,7 +279,7 @@ class DiagnosticsParser(ElementParser):
 class DiagnosticParser(ElementParser):
     """Parser for the `<diagnostic>` tags."""
 
-    def parse(self, element: _Element, context: ParsingContext) -> Diagnostic:
+    def parse(self, element: Element, context: ParsingContext) -> Diagnostic:
         allowed_attributes = ['fpi', 'icon', 'id', 'role', 'see',
                               '{http://www.w3.org/XML/1998/namespace}lang',
                               '{http://www.w3.org/XML/1998/namespace}space']
@@ -296,7 +296,7 @@ class DiagnosticParser(ElementParser):
 class PropertiesParser(ElementParser):
     """Parser for the `<properties>` tags."""
 
-    def parse(self, element: _Element, context: ParsingContext) -> Properties:
+    def parse(self, element: Element, context: ParsingContext) -> Properties:
         properties = []
         properties.extend(self._parse_child_tags(element, context, 'property'))
 
@@ -309,7 +309,7 @@ class PropertiesParser(ElementParser):
 class PropertyParser(ElementParser):
     """Parser for the `<property>` tags."""
 
-    def parse(self, element: _Element, context: ParsingContext) -> Property:
+    def parse(self, element: Element, context: ParsingContext) -> Property:
         attributes = parse_attributes(element.attrib, ['id', 'role', 'scheme'])
         return Property(content=self.get_rich_content(element, context), **attributes)
 
@@ -322,7 +322,7 @@ class PatternParser(ElementParser):
     In other cases, we load the pattern as a `ConcretePattern`.
     """
 
-    def parse(self, element: _Element, context: ParsingContext) -> Pattern:
+    def parse(self, element: Element, context: ParsingContext) -> Pattern:
         is_abstract = element.attrib.get('abstract', 'false') == 'true'
         is_instance = element.attrib.get('is-a')
 
@@ -359,7 +359,7 @@ class PatternParser(ElementParser):
 class PatternParameterParser(ElementParser):
     """Parse <param> tags used in instance patterns."""
 
-    def parse(self, element: _Element, context: ParsingContext) -> PatternParameter:
+    def parse(self, element: Element, context: ParsingContext) -> PatternParameter:
         return PatternParameter(name=element.attrib['name'], value=element.attrib['value'])
 
 
@@ -371,7 +371,7 @@ class RuleParser(ElementParser):
     Tags missing both an abstract and context attribute are parsed as `ExternalRule`.
     """
 
-    def parse(self, element: _Element, context: ParsingContext) -> Rule:
+    def parse(self, element: Element, context: ParsingContext) -> Rule:
         is_abstract = element.attrib.get('abstract', 'false') == 'true'
         loaded_external = element.attrib.get('context') is None
 
@@ -410,9 +410,9 @@ class IncludeParser(ElementParser):
     this can be a node of any type. Note that Schematron includes do not support a multi-root XML document.
     """
 
-    def parse(self, element: _Element, context: ParsingContext) -> SchematronASTNode:
+    def parse(self, element: Element, context: ParsingContext) -> SchematronASTNode:
         file_path = resolve_href(element.attrib['href'], context.base_path)
-        xml = load_xml(file_path)
+        xml = load_xml_document(file_path).getroot()
         parser = context.parser_factory.get_parser(etree.QName(xml).localname)
         return parser.parse(xml, context)
 
@@ -420,7 +420,7 @@ class IncludeParser(ElementParser):
 class VariableParser(ElementParser):
     """Parse <let> tags."""
 
-    def parse(self, element: _Element, context: ParsingContext) -> Variable:
+    def parse(self, element: Element, context: ParsingContext) -> Variable:
         if 'value' in element.attrib:
             return QueryVariable(name=element.attrib['name'], value=Query(element.attrib['value']))
         else:
@@ -431,7 +431,7 @@ class VariableParser(ElementParser):
 class ParagraphParser(ElementParser):
     """Parse <p> tags."""
 
-    def parse(self, element: _Element, context: ParsingContext) -> Paragraph:
+    def parse(self, element: Element, context: ParsingContext) -> Paragraph:
         attributes = parse_attributes(element.attrib, ['icon', 'id', 'class'], {'class': lambda k, v: {'class_': v}})
         content = ''.join(self.get_rich_content(element, context, parse_special=False))
         return Paragraph(content=content, **attributes)
@@ -444,12 +444,12 @@ class ExtendsParser(ElementParser):
     wrapped in an `ExtendsExternal`. If the `<extends>` points to a rule by ID, we return an `ExtendsById`.
     """
 
-    def parse(self, element: _Element, context: ParsingContext) -> Extends:
+    def parse(self, element: Element, context: ParsingContext) -> Extends:
         if 'rule' in element.attrib:
             return ExtendsById(element.attrib['rule'])
 
         file_path = resolve_href(element.attrib['href'], context.base_path)
-        xml = load_xml(file_path)
+        xml = load_xml_document(file_path).getroot()
         parser = context.parser_factory.get_parser('rule')
         rule = parser.parse(xml, context)
 
@@ -469,7 +469,7 @@ class CheckParser(ElementParser):
         """
         self.type_instance = type_instance
 
-    def parse(self, element: _Element, context: ParsingContext) -> Check:
+    def parse(self, element: Element, context: ParsingContext) -> Check:
         allowed_attributes = ['test', 'diagnostics', 'properties', 'subject',
                               'id', 'role', 'flag', 'see', 'fpi', 'icon',
                               '{http://www.w3.org/XML/1998/namespace}lang',

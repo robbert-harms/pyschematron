@@ -68,11 +68,10 @@ When applied to a document, the direct mode evaluation follows this procedure to
    In this phase we process the AST to create a concrete set of patterns and rules.
    All `<extends />` are resolved, abstract patterns are instantiated
    and redundant abstract rules and patterns are removed.
+#. Limit the AST to only include patterns and phases limited to the selected phase.
 #. Determine the query binding language to use.
    This library only supports `xslt`, `xslt2`, `xslt3`, `xpath`, `xpath2`, `xpath3`, and `xpath31`,
    where all `xslt` variations are limited to XPath expressions only.
-#. Bind the Schematron to the chosen phase and query binding language.
-   We select only the patterns to evaluate and pre-compile the corresponding XPath expressions.
 #. Apply the bound schema to an XML document to validate.
 
 
@@ -91,4 +90,14 @@ All Schematron specific elements are supported, except for XSLT elements.
 
 In terms of attributes, the `@documents` attribute of the `<assert />` tag is not supported.
 Furthermore, `@icon`, `@see`, `@fpi`, `@flag`, and `@role` are loaded but not used.
+
+Note that the ISO Schematron applies rules to:
+
+- Elements (*)
+- Attributes (@*)
+- Root node (/)
+- Comments (comment())
+- Processing instructions (processing-instruction())
+
+But it does not apply rules to text nodes.
 

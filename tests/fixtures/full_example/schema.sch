@@ -26,6 +26,9 @@
         <rule context="c:*[@type='fruit']">
             <extends href="check_weights.sch"/>
         </rule>
+        <rule context="c:*">
+            <!-- Blank rule to check if we only match nodes once. -->
+        </rule>
     </pattern>
 
 
@@ -48,6 +51,41 @@
             <report test="xs:integer(@volume) gt $max-volume">
                 We report an item with a volume greater than allowed.
             </report>
+        </rule>
+    </pattern>
+
+    <!-- Showcasing that we support checks on processing instructions. -->
+    <pattern>
+        <rule id="ru_processing-instructions-test" context="processing-instruction('xml-model')">
+            <assert test="contains(.,'foobar')">
+                XML model processing instruction does not include foobar.
+            </assert>
+        </rule>
+    </pattern>
+
+    <!-- Showcasing that we support checks on comments. -->
+    <pattern>
+        <rule id="ru_comments-test" context="comment()">
+            <assert test="starts-with(., ' Comment: ')">
+                This comment does not start with "Comment: ".
+            </assert>
+        </rule>
+    </pattern>
+
+    <!-- Showcasing that we support checks on attributes. -->
+    <pattern>
+        <rule id="ru_attribute-test" context="@id">
+            <assert test="starts-with(., 'id_')">
+                The id attribute does not starts with "id_".
+            </assert>
+        </rule>
+    </pattern>
+
+    <pattern>
+        <rule id="ru_root-test" context="c:cargo">
+            <assert test="@id">
+                The root node does not have an ID.
+            </assert>
         </rule>
     </pattern>
 
@@ -75,7 +113,6 @@
             <extends href="abstract_extends.sch"/>
         </rule>
     </pattern>
-
 
     <!-- Showcasing phases -->
     <phase id="check-weights">

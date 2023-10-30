@@ -7,8 +7,10 @@ __licence__ = 'GPL v3'
 from typing import Literal
 
 from pyschematron.direct_mode.lib.ast_visitors import ResolveExtendsVisitor, ResolveAbstractPatternsVisitor, \
-    PhaseSelectionVisitor
+    PhaseSelectionVisitor, GetNodesOfTypeVisitor
+from pyschematron.direct_mode.ast import Query as ASTQuery
 from pyschematron.direct_mode.ast import Schema
+from pyschematron.direct_mode.validators.queries.base import QueryParser, Query
 
 
 def resolve_ast_abstractions(schema: Schema) -> Schema:
