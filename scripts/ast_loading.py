@@ -25,7 +25,7 @@ schema = ResolveAbstractPatternsVisitor(schema).apply(schema)
 
 def yaml_stuff():
     yaml = ASTYaml()
-    # yaml.dump(schema, sys.stdout)
+    yaml.dump(schema, sys.stdout)
 
     yaml.dump({'b': 1, 'a': 2}, sys.stdout)
 
@@ -36,4 +36,5 @@ def yaml_stuff():
         loaded = yaml.load(v)
     print(loaded)
     print(loaded == schema)
+
 yaml_stuff()

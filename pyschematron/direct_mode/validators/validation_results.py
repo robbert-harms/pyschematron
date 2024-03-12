@@ -6,70 +6,180 @@ __maintainer__ = 'Robbert Harms'
 __email__ = 'robbert@xkls.nl'
 __licence__ = 'GPL v3'
 
+from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 
-from elementpath.xpath_context import ItemArgType
+from lxml.etree import ElementTree
 
-from pyschematron.direct_mode.ast import Check, Rule, ConcreteRule, Assert, Report, ConcretePattern
+from elementpath.xpath_context import ItemArgType, DocumentNode
+
+from pyschematron.direct_mode.ast import ConcreteRule, Assert, Report, ConcretePattern
 from pyschematron.direct_mode.validators.queries.base import EvaluationContext
 
 
 @dataclass(slots=True, frozen=True)
 class ValidationResult:
-    """Base class for the validation results. """
+    """Type class for the validation results. """
 
 
 @dataclass(slots=True, frozen=True)
-class BaseValidationResult(ValidationResult):
+class XMLDocumentValidationResult(ValidationResult):
+    """Result class for the full evaluation of the entire XML document.
+
+    This encapsulates the processing of all patterns over all nodes.
+
+    Args:
+
+        node_results: the results over all nodes
+    """
+    xml_document: ElementTree
+    xml_tree: DocumentNode
+    node_results: list[FullNodeResult]
+
+
+@dataclass(slots=True, frozen=True)
+class BaseXMLNodeResult(ValidationResult):
+    """Base class for the result of processing a specific XML node.
+
+    Args:
+        xml_node: the node on which we are reporting the processing result
+        evaluation_context: the context in which the node was processed.
+            This should not be specialized to the context in which the node was processed. For example, for a processed
+            pattern, this should be the "outside" evaluation context without the parameters inside the pattern.
+    """
     xml_node: ItemArgType
     evaluation_context: EvaluationContext
 
 
 @dataclass(slots=True, frozen=True)
-class XMLResult(BaseValidationResult):
-    node_results: list[NodeResult]
+class FullNodeResult(BaseXMLNodeResult):
+    """Result class for the full evaluation of an XML node.
 
+    This encapsulates the processing of all the patterns over the indicated XML node.
 
-@dataclass(slots=True, frozen=True)
-class NodeResult(BaseValidationResult):
+    Args:
+        pattern_results: the results of all the patterns
+    """
     pattern_results: list[PatternResult]
 
 
 @dataclass(slots=True, frozen=True)
-class PatternResult(BaseValidationResult):
+class PatternResult(BaseXMLNodeResult):
+    """Result class for evaluating a pattern on a node.
+
+    Args:
+        pattern: a reference to the evaluated pattern
+        rule_results: a list of the rule results for each rule in the pattern.
+    """
     pattern: ConcretePattern
-    rule_result: RuleResult | None
+    rule_results: list[RuleResult]
 
-    # todo add shadowed rules
-
-    def had_active_rule(self) -> bool:
-        """Check if this pattern result had an active rule or not.
+    def has_fired_rule(self) -> bool:
+        """Check if this pattern result has a fired rule or not.
 
         Returns:
             True if there was an active rule in this pattern for the node, False otherwise
         """
-        return self.rule_result is not None
+        return any(result.is_fired() for result in self.rule_results)
 
 
 @dataclass(slots=True, frozen=True)
-class RuleResult(BaseValidationResult):
-    """The result of checking the asserts and reports of a Rule on an XML node.
+class RuleResult(BaseXMLNodeResult, metaclass=ABCMeta):
+    """Base class for skipped, fired, and suppressed rules.
 
-    Since a rule may contain variables, we have both a parent context and a child context. The parent context is
-    without the variables loaded in this rule, the child context contains the variables.
+    Since we process all rules we need a way to indicate if a rule was skipped, fired, or suppressed.
+    This base class creates a base type for the different rule results.
 
     Args:
-        child_context: the context in which children of this rule may be evaluated
-        rule: a reference to the rule being checked
-        check_results: the results of the checks
+        rule: the rule which was processed
     """
-    child_context: EvaluationContext
     rule: ConcreteRule
-    check_results: list[CheckResult]
+
+    @abstractmethod
+    def is_skipped(self) -> bool:
+        """Check if this rule was skipped or not.
+
+        Returns:
+            True if the rule was skipped, False otherwise
+        """
+
+    @abstractmethod
+    def is_fired(self) -> bool:
+        """Check if this rule was fired or not.
+
+        Returns:
+            True if the rule was fired, False otherwise
+        """
+
+    @abstractmethod
+    def is_suppressed(self) -> bool:
+        """Check if this rule was suppressed or not.
+
+        Returns:
+            True if the rule was suppressed, False otherwise
+        """
 
 
 @dataclass(slots=True, frozen=True)
-class CheckResult(BaseValidationResult):
+class SkippedRuleResult(RuleResult):
+    """Indicates the result of a rule which was skipped because the context did not match."""
+
+    def is_skipped(self) -> bool:
+        return True
+
+    def is_fired(self) -> bool:
+        return False
+
+    def is_suppressed(self) -> bool:
+        return False
+
+
+@dataclass(slots=True, frozen=True)
+class SuppressedRuleResult(RuleResult):
+    """Indicates the result of a rule which was shadowed by a preceding rule."""
+
+    @classmethod
+    def from_fired_rule_result(cls, fired_rule_result: FiredRuleResult):
+        """Generated a suppressed rule result from the result of a fired rule.
+
+        This is a convenience method to turn a fired rule in a suppressed rule.
+
+        Args:
+            fired_rule_result: the fired result we would like to transform
+        """
+        return cls(fired_rule_result.xml_node, fired_rule_result.evaluation_context, fired_rule_result.rule)
+
+    def is_skipped(self) -> bool:
+        return False
+
+    def is_fired(self) -> bool:
+        return False
+
+    def is_suppressed(self) -> bool:
+        return True
+
+
+@dataclass(slots=True, frozen=True)
+class FiredRuleResult(RuleResult):
+    """The result of checking the asserts and reports of a Rule on an XML node.
+
+    Args:
+        check_results: the results of the checks
+    """
+    check_results: list[CheckResult]
+
+    def is_skipped(self) -> bool:
+        return False
+
+    def is_fired(self) -> bool:
+        return True
+
+    def is_suppressed(self) -> bool:
+        return False
+
+
+@dataclass(slots=True, frozen=True)
+class CheckResult(BaseXMLNodeResult):
     """The result of checking a Schematron assert or report on an XML node.
 
     Args:

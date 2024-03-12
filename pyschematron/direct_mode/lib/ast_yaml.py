@@ -62,7 +62,7 @@ class ASTYaml(YAML):
         Returns:
             A representer for this specific node type.
         """
-        return ASTNodeYamlRepresenter(ast_node)
+        return GenericASTNodeYamlRepresenter(ast_node)
 
 
 class YamlRepresenter(metaclass=ABCMeta):
@@ -83,8 +83,7 @@ class YamlRepresenter(metaclass=ABCMeta):
         """Get the dumping function `to_yaml` we can use to dump the item to YAML.
 
         Returns:
-            A function to create the yaml representation. This is usually a function `to_yaml` attached to the
-            class instance.
+            A function to create the yaml representation.
         """
 
     @abstractmethod
@@ -92,8 +91,7 @@ class YamlRepresenter(metaclass=ABCMeta):
         """Get the loading function we can use to load the YAML node into a `SchematronASTNode`.
 
         Returns:
-            A function to load the yaml representation. This is usually a function `to_yaml` attached to the
-            class instance.
+            A function to load the yaml representation.
         """
 
 
@@ -120,6 +118,37 @@ class PathRepresenter(YamlRepresenter):
 
 class ASTNodeYamlRepresenter(YamlRepresenter):
 
+    def get_dumping_function(self) -> Callable[[BaseRepresenter, Any], Callable]:
+        def to_yaml(representer: BaseRepresenter, node: SchematronASTNode) -> Node:
+            return self._to_yaml(representer, node)
+        return to_yaml
+
+    def get_loading_function(self) -> Callable[[BaseConstructor, Node], Any]:
+        def from_yaml(constructor: BaseConstructor, node: Node) -> Any:
+            return self._from_yaml(constructor, node)
+        return from_yaml
+
+    @abstractmethod
+    def _to_yaml(self, representer: BaseRepresenter, node: SchematronASTNode) -> Node:
+        """The YAML dumping function.
+
+        This is the actual function used to dump a specific Schematron node to YAML.
+
+        Returns:
+            The ruyaml Node used to dump to YAML.
+        """
+
+    @abstractmethod
+    def _from_yaml(self, constructor: BaseConstructor, node: Node) -> Any:
+        """The function to load a ruyaml YAML Node into a Schematron AST Node.
+
+        Returns:
+            The loaded Schematron AST node.
+        """
+
+
+class GenericASTNodeYamlRepresenter(ASTNodeYamlRepresenter):
+
     def __init__(self, node_type: Type[SchematronASTNode]):
         """Create a basic representer for :class:`SchematronASTNode`.
 
@@ -136,17 +165,7 @@ class ASTNodeYamlRepresenter(YamlRepresenter):
     def yaml_tag(self) -> str:
         return f'!{self._node_type.__name__}'
 
-    def get_dumping_function(self) -> Callable[[BaseRepresenter, Any], Callable]:
-        def to_yaml(representer: BaseRepresenter, node: SchematronASTNode) -> Callable:
-            return self._to_yaml(representer, node)
-        return to_yaml
-
-    def get_loading_function(self) -> Callable[[BaseConstructor, Node], Any]:
-        def from_yaml(constructor: BaseConstructor, node: Node) -> Any:
-            return self._from_yaml(constructor, node)
-        return from_yaml
-
-    def _to_yaml(self, representer: BaseRepresenter, node: SchematronASTNode) -> Callable:
+    def _to_yaml(self, representer: BaseRepresenter, node: SchematronASTNode) -> Node:
         """Internal function called by the forwarding function in `get_dumping_function`"""
         init_names = [f.name for f in dataclasses.fields(self.element_class) if f.init]
 

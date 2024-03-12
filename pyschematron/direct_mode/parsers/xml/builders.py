@@ -4,6 +4,7 @@ __maintainer__ = 'Robbert Harms'
 __email__ = 'robbert@altoida.com'
 
 from abc import ABCMeta, abstractmethod
+from typing import override
 
 from pyschematron.direct_mode.ast import SchematronASTNode, Check, Variable, Paragraph, Extends, ConcreteRule, \
     ExternalRule, AbstractRule, Query, Rule, ConcretePattern, Pattern, Namespace, Schema, Title, AbstractPattern, \
@@ -91,6 +92,7 @@ class RuleBuilder(SchematronASTNodeBuilder, metaclass=ABCMeta):
 
 class ConcreteRuleBuilder(RuleBuilder):
 
+    @override
     def build(self) -> ConcreteRule:
         if 'context' not in self.attributes:
             raise ValueError('A concrete rule must have a context.')
@@ -101,6 +103,7 @@ class ConcreteRuleBuilder(RuleBuilder):
 
 class AbstractRuleBuilder(RuleBuilder):
 
+    @override
     def build(self) -> AbstractRule:
         if 'context' in self.attributes:
             raise ValueError('An abstract rule can not have a context.')
@@ -114,6 +117,7 @@ class AbstractRuleBuilder(RuleBuilder):
 
 class ExternalRuleBuilder(RuleBuilder):
 
+    @override
     def build(self) -> ExternalRule:
         if 'context' in self.attributes:
             raise ValueError('An external rule can not have a context.')
@@ -199,6 +203,7 @@ class PatternBuilder(SchematronASTNodeBuilder, metaclass=ABCMeta):
 
 class ConcretePatternBuilder(PatternBuilder):
 
+    @override
     def build(self) -> ConcretePattern:
         return ConcretePattern(rules=self.rules, variables=self.variables, paragraphs=self.paragraphs,
                                title=self.title, **self.attributes)
@@ -206,6 +211,7 @@ class ConcretePatternBuilder(PatternBuilder):
 
 class AbstractPatternBuilder(PatternBuilder):
 
+    @override
     def build(self) -> AbstractPattern:
         return AbstractPattern(rules=self.rules, variables=self.variables, paragraphs=self.paragraphs,
                                title=self.title, **self.attributes)
@@ -213,6 +219,7 @@ class AbstractPatternBuilder(PatternBuilder):
 
 class InstancePatternBuilder(PatternBuilder):
 
+    @override
     def build(self) -> InstancePattern:
         return InstancePattern(params=self.pattern_parameters, **self.attributes)
 
@@ -226,6 +233,7 @@ class PhaseBuilder(SchematronASTNodeBuilder):
         self.paragraphs: list[Paragraph] = []
         self.attributes = {}
 
+    @override
     def build(self) -> Phase:
         return Phase(active=self.active, variables=self.variables, paragraphs=self.paragraphs, **self.attributes)
 
@@ -286,6 +294,7 @@ class SchemaBuilder(SchematronASTNodeBuilder):
         self.phases: list[Phase] = []
         self.attributes = {}
 
+    @override
     def build(self) -> Schema:
         return Schema(patterns=self.patterns, namespaces=self.namespaces, phases=self.phases,
                       paragraphs=self.paragraphs, variables=self.variables,

@@ -13,7 +13,7 @@ __maintainer__ = 'Robbert Harms'
 __email__ = 'robbert@xkls.nl'
 __licence__ = 'GPL v3'
 
-from typing import Any, Callable, Type
+from typing import Any, Callable, Type, Self, override
 from abc import abstractmethod, ABCMeta
 
 from elementpath import XPathToken, XPath1Parser, XPath2Parser, XPathContext
@@ -29,7 +29,7 @@ from pyschematron.direct_mode.validators.queries.exceptions import MissingRootNo
 class XPathQueryParser(QueryParser, metaclass=ABCMeta):
 
     @abstractmethod
-    def with_custom_function(self, custom_function: CustomXPathFunction) -> XPathQueryParser:
+    def with_custom_function(self, custom_function: CustomXPathFunction) -> Self:
         """Create a copy of this XPath query parser with an additional custom function.
 
         Args:
@@ -58,6 +58,7 @@ class ElementPathXPathQueryParser(XPathQueryParser, metaclass=ABCMeta):
         self._custom_functions = custom_functions or []
         self._parser = self._get_updated_parser()
 
+    @override
     def parse(self, source: str) -> Query:
         xpath_token = self._parser.parse(source)
         return XPathQuery(xpath_token)
@@ -166,29 +167,33 @@ class XPathEvaluationContext(EvaluationContext):
             raise MissingRootNodeError('Missing root node in XPath context, please set a root node first.')
         return self._xpath_context
 
-    def with_context_item(self, xml_item: ItemArgType) -> EvaluationContext:
+    @override
+    def with_context_item(self, xml_item: ItemArgType) -> Self:
         if xml_item is self._context_variables['item']:
             return self
         return self._get_updated({'item': xml_item})
 
-    def with_xml_root(self, xml_root: RootArgType) -> XPathEvaluationContext:
+    @override
+    def with_xml_root(self, xml_root: RootArgType) -> Self:
         if xml_root is self._context_variables['root']:
             return self
         return self._get_updated({'root': xml_root})
 
-    def with_namespaces(self, namespaces: dict[str, str]) -> XPathEvaluationContext:
+    @override
+    def with_namespaces(self, namespaces: dict[str, str]) -> Self:
         return self._get_updated({'namespaces': namespaces})
 
-    def with_variables(self, variables: dict[str, Any], overwrite: bool = False) -> EvaluationContext:
+    @override
+    def with_variables(self, variables: dict[str, Any], overwrite: bool = False) -> Self:
         if overwrite:
             return self._get_updated({'variables': variables})
         else:
             return self._get_updated({'variables': self._context_variables['variables'] | variables})
 
-    def _get_updated(self, updates: dict[str, Any]) -> XPathEvaluationContext:
+    def _get_updated(self, updates: dict[str, Any]) -> Self:
         kwargs = self._context_variables.copy()
         kwargs.update(updates)
-        return XPathEvaluationContext(**kwargs)
+        return type(self)(**kwargs)
 
 
 class XPathQuery(Query):
@@ -203,6 +208,7 @@ class XPathQuery(Query):
         """
         self._xpath_token = xpath_token
 
+    @override
     def evaluate(self, context: XPathEvaluationContext | None = None) -> Any:
         xpath_context = None
         if context:
@@ -223,10 +229,12 @@ class XPath1QueryParser(ElementPathXPathQueryParser):
         """
         super().__init__(XPath1Parser, namespaces=namespaces)
 
-    def with_namespaces(self, namespaces: dict[str, str]) -> XPathQueryParser:
+    @override
+    def with_namespaces(self, namespaces: dict[str, str]) -> Self:
         return type(self)(self._namespaces | namespaces)
 
-    def with_custom_function(self, custom_function: CustomXPathFunction) -> XPathQueryParser:
+    @override
+    def with_custom_function(self, custom_function: CustomXPathFunction) -> Self:
         raise ValueError('Custom functions are not supported for XPath1 parsers.')
 
 
@@ -245,10 +253,12 @@ class XPath2QueryParser(ElementPathXPathQueryParser):
         """
         super().__init__(XPath2Parser, namespaces=namespaces, custom_functions=custom_functions)
 
-    def with_namespaces(self, namespaces: dict[str, str]) -> XPathQueryParser:
+    @override
+    def with_namespaces(self, namespaces: dict[str, str]) -> Self:
         return type(self)(self._namespaces | namespaces)
 
-    def with_custom_function(self, custom_function: CustomXPathFunction) -> XPathQueryParser:
+    @override
+    def with_custom_function(self, custom_function: CustomXPathFunction) -> Self:
         return type(self)(namespaces=self._namespaces,
                           custom_functions=self._custom_functions + [custom_function])
 
@@ -268,10 +278,12 @@ class XPath3QueryParser(ElementPathXPathQueryParser):
         """
         super().__init__(XPath3Parser, namespaces=namespaces, custom_functions=custom_functions)
 
-    def with_namespaces(self, namespaces: dict[str, str]) -> XPathQueryParser:
+    @override
+    def with_namespaces(self, namespaces: dict[str, str]) -> Self:
         return type(self)(self._namespaces | namespaces)
 
-    def with_custom_function(self, custom_function: CustomXPathFunction) -> XPathQueryParser:
+    @override
+    def with_custom_function(self, custom_function: CustomXPathFunction) -> Self:
         return type(self)(namespaces=self._namespaces,
                           custom_functions=self._custom_functions + [custom_function])
 
@@ -291,9 +303,11 @@ class XPath31QueryParser(ElementPathXPathQueryParser):
         """
         super().__init__(XPath31Parser, namespaces=namespaces, custom_functions=custom_functions)
 
-    def with_namespaces(self, namespaces: dict[str, str]) -> XPathQueryParser:
+    @override
+    def with_namespaces(self, namespaces: dict[str, str]) -> Self:
         return type(self)(self._namespaces | namespaces)
 
-    def with_custom_function(self, custom_function: CustomXPathFunction) -> XPathQueryParser:
+    @override
+    def with_custom_function(self, custom_function: CustomXPathFunction) -> Self:
         return type(self)(namespaces=self._namespaces,
                           custom_functions=self._custom_functions + [custom_function])

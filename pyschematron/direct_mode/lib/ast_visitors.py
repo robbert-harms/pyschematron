@@ -3,7 +3,7 @@ __date__ = '2023-03-06'
 __maintainer__ = 'Robbert Harms'
 __email__ = 'robbert@altoida.com'
 
-from typing import Any, Mapping, Iterable, Literal, Type
+from typing import Any, Mapping, Iterable, Literal, Type, override
 
 from abc import ABCMeta, abstractmethod
 
@@ -58,6 +58,7 @@ class FindIdVisitor(ASTVisitor):
         super().__init__()
         self._id_ref = id_ref
 
+    @override
     def visit(self, ast_node: SchematronASTNode) -> Any:
         if hasattr(ast_node, 'id') and getattr(ast_node, 'id') == self._id_ref:
             return ast_node
@@ -74,6 +75,7 @@ class GetIDMappingVisitor(ASTVisitor):
         super().__init__()
         self._result = {}
 
+    @override
     def visit(self, ast_node: SchematronASTNode) -> Any:
         self._result |= self._visit(ast_node)
         return self._result
@@ -100,6 +102,7 @@ class GetNodesOfTypeVisitor(ASTVisitor):
         self._types = types
         self._result = []
 
+    @override
     def visit(self, ast_node: SchematronASTNode) -> Any:
         for child in ast_node.get_children():
             child.accept_visitor(self)
@@ -124,6 +127,7 @@ class ResolveExtendsVisitor(ASTVisitor):
         super().__init__()
         self._schema = schema
 
+    @override
     def visit(self, ast_node: SchematronASTNode) -> SchematronASTNode:
         match ast_node:
             case Schema():
@@ -229,6 +233,7 @@ class ResolveAbstractPatternsVisitor(ASTVisitor):
         super().__init__()
         self._schema = schema
 
+    @override
     def visit(self, ast_node: SchematronASTNode) -> SchematronASTNode:
         match ast_node:
             case Schema():
@@ -271,7 +276,8 @@ class ResolveAbstractPatternsVisitor(ASTVisitor):
         macro_expansions = {f'${param.name}': param.value for param in instance_pattern.params}
         macro_expand_visitor = MacroExpandVisitor(macro_expansions)
 
-        return macro_expand_visitor.apply(abstract_pattern)
+        macro_expanded_pattern = macro_expand_visitor.apply(abstract_pattern)
+        return macro_expanded_pattern.with_updated(id=instance_pattern.id)
 
 
 class MacroExpandVisitor(ASTVisitor):
@@ -288,6 +294,7 @@ class MacroExpandVisitor(ASTVisitor):
         super().__init__()
         self._macro_expansions = macro_expansions
 
+    @override
     def visit(self, ast_node: SchematronASTNode) -> SchematronASTNode:
         if isinstance(ast_node, AbstractPattern):
             expanded_pattern = self._visit_generic_node(ast_node)
@@ -352,6 +359,7 @@ class PhaseSelectionVisitor(ASTVisitor):
         if self._phase_node:
             self._active_pattern_ids = [active_phase.pattern_id for active_phase in self._phase_node.active]
 
+    @override
     def visit(self, ast_node: SchematronASTNode) -> SchematronASTNode | bool:
         match ast_node:
             case Schema():

@@ -7,6 +7,7 @@ __email__ = 'robbert@xkls.nl'
 __licence__ = 'GPL v3'
 
 from abc import ABCMeta, abstractmethod
+from typing import override
 
 from pyschematron.direct_mode.ast import Schema
 from pyschematron.direct_mode.validators.queries.base import QueryProcessor, SimpleQueryProcessor
@@ -80,6 +81,7 @@ class SimpleQueryProcessorFactory(QueryProcessorFactory):
             'xpath31': XPathEvaluationContext()
         }
 
+    @override
     def get_query_processor(self, query_binding: str) -> QueryProcessor:
         try:
             parser = self._parsers[query_binding]
@@ -88,6 +90,7 @@ class SimpleQueryProcessorFactory(QueryProcessorFactory):
         except KeyError:
             raise ValueError(f'No parser could be found for the query binding "{query_binding}".')
 
+    @override
     def get_schema_query_processor(self, schema: Schema) -> QueryProcessor:
         query_binding = schema.query_binding or 'xslt'
         namespaces = {ns.prefix: ns.uri for ns in schema.namespaces}

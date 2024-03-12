@@ -6,7 +6,7 @@ __email__ = 'robbert@altoida.com'
 import os
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
-from typing import Type
+from typing import Type, override
 
 import elementpath
 
@@ -162,6 +162,7 @@ class ElementParser(metaclass=ABCMeta):
 class SchemaParser(ElementParser):
     """Parse <schema> root tags"""
 
+    @override
     def parse(self, element: Element, context: ParsingContext) -> Schema:
         builder = SchemaBuilder()
         builder.add_attributes(element.attrib)
@@ -201,6 +202,7 @@ class SchemaParser(ElementParser):
 class NamespaceParser(ElementParser):
     """Parser for the `<ns>` tags."""
 
+    @override
     def parse(self, element: Element, context: ParsingContext) -> Namespace:
         return Namespace(prefix=element.attrib['prefix'], uri=element.attrib['uri'])
 
@@ -208,6 +210,7 @@ class NamespaceParser(ElementParser):
 class NameParser(ElementParser):
     """Parser for the `<name>` tags."""
 
+    @override
     def parse(self, element: Element, context: ParsingContext) -> Name:
         if element.attrib.get('path'):
             return Name(Query(element.attrib['path']))
@@ -217,6 +220,7 @@ class NameParser(ElementParser):
 class ValueOfParser(ElementParser):
     """Parser for the `<value-of>` tags."""
 
+    @override
     def parse(self, element: Element, context: ParsingContext) -> ValueOf:
         return ValueOf(Query(element.attrib['select']))
 
@@ -224,6 +228,7 @@ class ValueOfParser(ElementParser):
 class TitleParser(ElementParser):
     """Parser for the `<title>` tags."""
 
+    @override
     def parse(self, element: Element, context: ParsingContext) -> Title:
         return Title(content=''.join(self.get_rich_content(element, context)))
 
@@ -231,6 +236,7 @@ class TitleParser(ElementParser):
 class PhaseParser(ElementParser):
     """Parser for the `<phase>` tags."""
 
+    @override
     def parse(self, element: Element, context: ParsingContext) -> Phase:
         builder = PhaseBuilder()
 
@@ -254,6 +260,7 @@ class PhaseParser(ElementParser):
 class ActivePhaseParser(ElementParser):
     """Parser for the `<active>` tags."""
 
+    @override
     def parse(self, element: Element, context: ParsingContext) -> ActivePhase:
         content_parts = self.get_rich_content(element, context, parse_special=False)
         content = None
@@ -266,6 +273,7 @@ class ActivePhaseParser(ElementParser):
 class DiagnosticsParser(ElementParser):
     """Parser for the `<diagnostics>` tags."""
 
+    @override
     def parse(self, element: Element, context: ParsingContext) -> Diagnostics:
         diagnostics = []
         diagnostics.extend(self._parse_child_tags(element, context, 'diagnostic'))
@@ -279,6 +287,7 @@ class DiagnosticsParser(ElementParser):
 class DiagnosticParser(ElementParser):
     """Parser for the `<diagnostic>` tags."""
 
+    @override
     def parse(self, element: Element, context: ParsingContext) -> Diagnostic:
         allowed_attributes = ['fpi', 'icon', 'id', 'role', 'see',
                               '{http://www.w3.org/XML/1998/namespace}lang',
@@ -296,6 +305,7 @@ class DiagnosticParser(ElementParser):
 class PropertiesParser(ElementParser):
     """Parser for the `<properties>` tags."""
 
+    @override
     def parse(self, element: Element, context: ParsingContext) -> Properties:
         properties = []
         properties.extend(self._parse_child_tags(element, context, 'property'))
@@ -309,6 +319,7 @@ class PropertiesParser(ElementParser):
 class PropertyParser(ElementParser):
     """Parser for the `<property>` tags."""
 
+    @override
     def parse(self, element: Element, context: ParsingContext) -> Property:
         attributes = parse_attributes(element.attrib, ['id', 'role', 'scheme'])
         return Property(content=self.get_rich_content(element, context), **attributes)
@@ -322,6 +333,7 @@ class PatternParser(ElementParser):
     In other cases, we load the pattern as a `ConcretePattern`.
     """
 
+    @override
     def parse(self, element: Element, context: ParsingContext) -> Pattern:
         is_abstract = element.attrib.get('abstract', 'false') == 'true'
         is_instance = element.attrib.get('is-a')
@@ -359,6 +371,7 @@ class PatternParser(ElementParser):
 class PatternParameterParser(ElementParser):
     """Parse <param> tags used in instance patterns."""
 
+    @override
     def parse(self, element: Element, context: ParsingContext) -> PatternParameter:
         return PatternParameter(name=element.attrib['name'], value=element.attrib['value'])
 
@@ -371,6 +384,7 @@ class RuleParser(ElementParser):
     Tags missing both an abstract and context attribute are parsed as `ExternalRule`.
     """
 
+    @override
     def parse(self, element: Element, context: ParsingContext) -> Rule:
         is_abstract = element.attrib.get('abstract', 'false') == 'true'
         loaded_external = element.attrib.get('context') is None
@@ -410,6 +424,7 @@ class IncludeParser(ElementParser):
     this can be a node of any type. Note that Schematron includes do not support a multi-root XML document.
     """
 
+    @override
     def parse(self, element: Element, context: ParsingContext) -> SchematronASTNode:
         file_path = resolve_href(element.attrib['href'], context.base_path)
         xml = load_xml_document(file_path).getroot()
@@ -420,6 +435,7 @@ class IncludeParser(ElementParser):
 class VariableParser(ElementParser):
     """Parse <let> tags."""
 
+    @override
     def parse(self, element: Element, context: ParsingContext) -> Variable:
         if 'value' in element.attrib:
             return QueryVariable(name=element.attrib['name'], value=Query(element.attrib['value']))
@@ -431,6 +447,7 @@ class VariableParser(ElementParser):
 class ParagraphParser(ElementParser):
     """Parse <p> tags."""
 
+    @override
     def parse(self, element: Element, context: ParsingContext) -> Paragraph:
         attributes = parse_attributes(element.attrib, ['icon', 'id', 'class'], {'class': lambda k, v: {'class_': v}})
         content = ''.join(self.get_rich_content(element, context, parse_special=False))
@@ -444,6 +461,7 @@ class ExtendsParser(ElementParser):
     wrapped in an `ExtendsExternal`. If the `<extends>` points to a rule by ID, we return an `ExtendsById`.
     """
 
+    @override
     def parse(self, element: Element, context: ParsingContext) -> Extends:
         if 'rule' in element.attrib:
             return ExtendsById(element.attrib['rule'])
@@ -469,6 +487,7 @@ class CheckParser(ElementParser):
         """
         self.type_instance = type_instance
 
+    @override
     def parse(self, element: Element, context: ParsingContext) -> Check:
         allowed_attributes = ['test', 'diagnostics', 'properties', 'subject',
                               'id', 'role', 'flag', 'see', 'fpi', 'icon',

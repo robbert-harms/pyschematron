@@ -12,7 +12,7 @@
 
     <!-- Showing dynamic variables. -->
     <let name="max-weight" value="xs:integer(/c:cargo/c:vehicles[1]/c:apple[1]/@weight)"/> <!-- kg -->
-    <let name="max-volume" value="xs:integer(200)"/> <!-- m3 -->
+    <let name="max-volume" value="xs:integer(200) * $max-weight"/> <!-- m3 -->
 
 
     <!-- Showcasing pattern with external extends -->

@@ -3,11 +3,11 @@
 language: python
 
 python:
-  - "3.11"
+  - "3.12"
 
 # command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install:
-  - python -c 'import toml; c = toml.load("pyproject.toml"); print("\n".join(c["project"]["dependencies"]));' | pip install -r /dev/stdin
+  - python -c 'import tomllib; f = open("pyproject.toml", "rb"); c = tomllib.load(f); print("\n".join(c["project"]["dependencies"]));' | pip install -r /dev/stdin
 
 # command to run tests, e.g. python setup.py test
 script: make test

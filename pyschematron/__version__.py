@@ -8,11 +8,11 @@ from importlib import metadata
 from importlib.metadata import PackageNotFoundError
 from pathlib import Path
 
-import toml
+import tomllib
 
 try:
     __version__ = metadata.version('pyschematron')
 except PackageNotFoundError:
-    with open(Path(__file__).parent.parent / 'pyproject.toml') as f:
-        pyproject = toml.load(f)
+    with open(Path(__file__).parent.parent / 'pyproject.toml', 'rb') as f:
+        pyproject = tomllib.load(f)
         __version__ = pyproject['project']['version']

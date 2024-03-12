@@ -4,11 +4,11 @@ __maintainer__ = 'Robbert Harms'
 __email__ = 'robbert@altoida.com'
 
 from pathlib import Path
-from pprint import pprint
 
 from pyschematron.direct_mode.lib.ast_visitors import ResolveExtendsVisitor, \
     ResolveAbstractPatternsVisitor, PhaseSelectionVisitor
 from pyschematron.direct_mode.parsers.xml.parser import ParsingContext, SchemaParser
+from pyschematron.direct_mode.svrl.svrl_report import DefaultSVRLReportBuilder
 from pyschematron.direct_mode.validators.validators import SimpleSchematronXMLValidator
 from pyschematron.utils import load_xml_document
 
@@ -36,6 +36,6 @@ validator = SimpleSchematronXMLValidator(schema, '#ALL', parsing_context.base_pa
 xml_document = load_xml_document(example_path / 'cargo.xml')
 validation_results = validator.validate_xml(xml_document)
 
-pprint(validation_results)
-print()
-sum([len(node_result.pattern_results) for node_result in validation_results.node_results])
+svrl_report = DefaultSVRLReportBuilder().create_svrl(validation_results)
+print(svrl_report)
+

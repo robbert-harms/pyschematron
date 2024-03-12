@@ -9,7 +9,8 @@ If the XML you wish to validate passes all the Schematron assertions,
 your XML is considered valid according to the Schematron schema.
 
 There are various versions of Schematron available.
-This library only supports the latest version of Schematron, `ISO/IEC 19757-3:2020 <https://www.iso.org/standard/74515.html>`_, with a few limitations (see below).
+This library only supports the latest version of Schematron,
+`ISO/IEC 19757-3:2020 <https://www.iso.org/standard/74515.html>`_, with a few limitations (see below).
 
 Currently, this library only supports a pure Python mode of Schematron validation.
 In this pure Python mode we load the Schematron into an internal representation and apply that to an XML.
@@ -21,10 +22,12 @@ In the future we hope to expand this library with an XSLT transformation based p
 Unfortunately XSLT transformations require an XSLT processor,
 which is currently not available in Python for XSLT >= 2.0.
 
-A few similar packages to this software in other languages are `node-schematron <https://github.com/wvbe/node-schematron#readme>`_ in Javascript, and
+A few similar packages to this software in other languages are
+`node-schematron <https://github.com/wvbe/node-schematron#readme>`_ in Javascript, and
 `ph-schematron <http://phax.github.io/ph-schematron/>`_ in Java.
 
-For all XPath expressions this package uses the `elementpath <https://github.com/sissaschool/elementpath>`_ library supporting XPath 1.0, 2.0 and 3.0 selectors.
+For all XPath expressions this package uses the
+`elementpath <https://github.com/sissaschool/elementpath>`_ library supporting XPath 1.0, 2.0 and 3.0 selectors.
 
 **********
 Python API
@@ -66,7 +69,7 @@ When applied to a document, the direct mode evaluation follows this procedure to
    All `<extends />` are loaded but not fully resolved at this stage.
 #. Recreate the AST without abstract patterns and rules.
    In this phase we process the AST to create a concrete set of patterns and rules.
-   All `<extends />` are resolved, abstract patterns are instantiated
+   All `<extends />` are resolved, abstract patterns are instantiated,
    and redundant abstract rules and patterns are removed.
 #. Limit the AST to only include patterns and phases limited to the selected phase.
 #. Determine the query binding language to use.

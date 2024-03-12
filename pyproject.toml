@@ -2,8 +2,8 @@
 name = "pyschematron"
 description = "Schematron validation in Python."
 readme = "README.rst"
-version = "0.1.1"
-requires-python = ">=3.11"
+version = "0.1.2"
+requires-python = ">=3.12"
 keywords = ["Schematron", "XML validation"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -11,29 +11,29 @@ classifiers = [
     "Intended Audience :: Developers",
     "Natural Language :: English",
     "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
-    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 license = { file="LICENSE" }
 authors = [
     { name = "Robbert Harms", email = "robbert@xkls.nl" }
 ]
 dependencies = [
-    "xmlschema==2.4.0",
-    "elementpath==4.1.5",
+    "xmlschema==3.0.2",
+    "elementpath==4.3.0",
     "typer[all]==0.9.0",
     "appdirs==1.4.4",
-    "lxml==4.9.3",
-    "Jinja2==3.1.2",
+    "lxml==5.1.0",
+    "Jinja2==3.1.3",
     "ruyaml==0.91.0"
 ]
 
 [project.optional-dependencies]
 test = [
-    "pytest==7.4.2",
-    "pytest-check==2.2.1",
+    "pytest==8.0.2",
+    "pytest-check==2.3.1",
     "pytest-cov==4.1.0",
-    "pytest-html==4.0.2",
-    "tox==4.11.3"
+    "pytest-html==4.1.1",
+    "tox==4.14.1"
 ]
 doc = [
     "sphinx==7.2.6"

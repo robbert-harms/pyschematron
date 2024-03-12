@@ -7,7 +7,7 @@ __email__ = 'robbert@xkls.nl'
 __licence__ = 'GPL v3'
 
 from abc import ABCMeta, abstractmethod
-from typing import Any
+from typing import Any, Self, override
 from elementpath.tree_builders import RootArgType
 from elementpath.xpath_context import ItemArgType
 
@@ -36,7 +36,7 @@ class QueryProcessor(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def with_namespaces(self, namespaces: dict[str, str]) -> QueryProcessor:
+    def with_namespaces(self, namespaces: dict[str, str]) -> Self:
         """Create a copy of this query processor with updated namespaces.
 
         Args:
@@ -59,13 +59,16 @@ class SimpleQueryProcessor(QueryProcessor):
         self._query_parser = query_parser
         self._evaluation_context = evaluation_context
 
+    @override
     def get_query_parser(self) -> QueryParser:
         return self._query_parser
 
+    @override
     def get_evaluation_context(self) -> EvaluationContext:
         return self._evaluation_context
 
-    def with_namespaces(self, namespaces: dict[str, str]) -> SimpleQueryProcessor:
+    @override
+    def with_namespaces(self, namespaces: dict[str, str]) -> Self:
         return type(self)(self._query_parser.with_namespaces(namespaces),
                           self._evaluation_context.with_namespaces(namespaces))
 
@@ -85,7 +88,7 @@ class QueryParser(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def with_namespaces(self, namespaces: dict[str, str]) -> QueryParser:
+    def with_namespaces(self, namespaces: dict[str, str]) -> Self:
         """Create a copy of this query parser with updated namespaces.
 
         Args:
@@ -109,10 +112,12 @@ class CachingQueryParser(QueryParser):
         self._query_parser = query_parser
         self._query_cache = {}
 
+    @override
     def parse(self, source: str) -> Query:
         return self._query_cache.setdefault(source, self._query_parser.parse(source))
 
-    def with_namespaces(self, namespaces: dict[str, str]) -> CachingQueryParser:
+    @override
+    def with_namespaces(self, namespaces: dict[str, str]) -> Self:
         return CachingQueryParser(self._query_parser.with_namespaces(namespaces))
 
 
@@ -123,7 +128,7 @@ class EvaluationContext(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def with_xml_root(self, xml_root: RootArgType) -> EvaluationContext:
+    def with_xml_root(self, xml_root: RootArgType) -> Self:
         """Create a new evaluation context with the XML root node we can use for dynamic queries.
 
         For queries like: `xs:integer(42)` no XML root node is needed.
@@ -137,7 +142,7 @@ class EvaluationContext(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def with_context_item(self, xml_item: ItemArgType) -> EvaluationContext:
+    def with_context_item(self, xml_item: ItemArgType) -> Self:
         """Create a new evaluation context with the provided xml item (node, comment, attribute) as query base.
 
         This is needed for asserts and reports queries which assume the context of the rule node.
@@ -150,7 +155,7 @@ class EvaluationContext(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def with_namespaces(self, namespaces: dict[str, str]) -> EvaluationContext:
+    def with_namespaces(self, namespaces: dict[str, str]) -> Self:
         """Create a new evaluation context with the namespaces used during evaluation.
 
         Args:
@@ -162,7 +167,7 @@ class EvaluationContext(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def with_variables(self, variables: dict[str, Any], overwrite: bool = False) -> EvaluationContext:
+    def with_variables(self, variables: dict[str, Any], overwrite: bool = False) -> Self:
         """Create a new evaluation context with the namespaces used during evaluation.
 
         Args:

@@ -14,16 +14,21 @@ __licence__ = 'GPL v3'
 
 from dataclasses import dataclass, field, fields
 from pathlib import Path
-from typing import Literal, Iterable, Mapping, Any
+from typing import Literal, Iterable, Mapping, Any, Self
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from pyschematron.direct_mode.lib.ast_visitors import ASTVisitor
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class SchematronASTNode:
-    """Base class for all Schematron AST nodes."""
+    """Base class for all Schematron AST nodes.
+
+    In the subclasses we allow the use of lists as datatype, although we aim for immutable objects. Due to this,
+    we implement our own equality and hash functions, transforming all lists into tuples for the sake of comparing and
+    hashing.
+    """
 
     def accept_visitor(self, visitor: ASTVisitor) -> Any:
         """Accept a visitor on this node.
@@ -46,7 +51,7 @@ class SchematronASTNode:
         """
         return {field.name: getattr(self, field.name) for field in fields(self)}
 
-    def with_updated(self, **updated_items) -> SchematronASTNode:
+    def with_updated(self, **updated_items) -> Self:
         """Get a copy of this AST node with updated init values.
 
         This gets the current set of init values and updates those with the provided items.
@@ -83,8 +88,24 @@ class SchematronASTNode:
 
         return get_ast_nodes(self.get_init_values())
 
+    def __eq__(self, other):
+        """Compare the other object against this class based on the values provided at class initialization."""
+        if type(other) is type(self):
+            return self.get_init_values() == other.get_init_values()
+        return False
 
-@dataclass(slots=True, frozen=True)
+    def __hash__(self):
+        """Hash this object assuming a list as a tuple."""
+        items = []
+        for k, v in self.get_init_values().items():
+            if isinstance(v, list):
+                items.append((k, tuple(v)))
+            else:
+                items.append((k, v))
+        return hash(tuple(items))
+
+
+@dataclass(slots=True, frozen=True, eq=False)
 class Schema(SchematronASTNode):
     """Representation of a `<schema>` tag.
 
@@ -129,7 +150,7 @@ class Schema(SchematronASTNode):
     xml_space: Literal['default', 'preserve'] | None = None
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class Namespace(SchematronASTNode):
     """Representation of an `<ns>` tag.
 
@@ -141,7 +162,7 @@ class Namespace(SchematronASTNode):
     uri: str
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class Phase(SchematronASTNode):
     """Representation of a `<phase>` tag.
 
@@ -170,7 +191,7 @@ class Phase(SchematronASTNode):
     xml_space: Literal['default', 'preserve'] | None = None
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class ActivePhase(SchematronASTNode):
     """Representation of a `<active>` tag.
 
@@ -182,7 +203,7 @@ class ActivePhase(SchematronASTNode):
     content: str | None = None
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class Diagnostics(SchematronASTNode):
     """Representation of a `<diagnostics>` tag.
 
@@ -192,7 +213,7 @@ class Diagnostics(SchematronASTNode):
     diagnostics: list[Diagnostic]
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class Diagnostic(SchematronASTNode):
     """Representation of a `<diagnostic>` tag.
 
@@ -218,7 +239,7 @@ class Diagnostic(SchematronASTNode):
     xml_space: Literal['default', 'preserve'] | None = None
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class Properties(SchematronASTNode):
     """Representation of a `<properties>` tag.
 
@@ -228,7 +249,7 @@ class Properties(SchematronASTNode):
     properties: list[Property]
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class Property(SchematronASTNode):
     """Representation of a `<property>` tag.
 
@@ -244,7 +265,7 @@ class Property(SchematronASTNode):
     scheme: str | None = None
 
 
-@dataclass(slots=True, kw_only=True, frozen=True)
+@dataclass(slots=True, kw_only=True, frozen=True, eq=False)
 class Pattern(SchematronASTNode):
     """Abstract representation of a <pattern> tag.
 
@@ -271,7 +292,7 @@ class Pattern(SchematronASTNode):
     xml_space: Literal['default', 'preserve'] | None = None
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class ConcretePattern(Pattern):
     """A concrete pattern, this neither inherits another pattern, nor is an abstract pattern.
 
@@ -287,7 +308,7 @@ class ConcretePattern(Pattern):
     title: Title | None = None
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class AbstractPattern(Pattern):
     """An abstract pattern, coming from a pattern with the attribute `@abstract` set to True.
 
@@ -303,7 +324,7 @@ class AbstractPattern(Pattern):
     title: Title | None = None
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class InstancePattern(Pattern):
     """A pattern inheriting another pattern, i.e. patterns with the `is-a` attribute set.
 
@@ -314,7 +335,7 @@ class InstancePattern(Pattern):
     params: list[PatternParameter] = field(default_factory=list)
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class PatternParameter(SchematronASTNode):
     """A parameter inside a pattern with the `is-a` attribute set.
 
@@ -326,7 +347,7 @@ class PatternParameter(SchematronASTNode):
     value: str
 
 
-@dataclass(slots=True, kw_only=True, frozen=True)
+@dataclass(slots=True, kw_only=True, frozen=True, eq=False)
 class Rule(SchematronASTNode):
     """Abstract representation of a <rule> tag.
 
@@ -360,7 +381,7 @@ class Rule(SchematronASTNode):
     xml_space: Literal['default', 'preserve'] | None = None
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class ConcreteRule(Rule):
     """Representation of a concrete <rule> tag (e.g. not abstract).
 
@@ -372,7 +393,7 @@ class ConcreteRule(Rule):
     id: str | None = None
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class AbstractRule(Rule):
     """Representation of an abstract <rule> tag.
 
@@ -382,18 +403,18 @@ class AbstractRule(Rule):
     id: str
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class ExternalRule(Rule):
     """Representation of an <rule> loaded from an external file using extends."""
     id: str | None = None
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class Extends(SchematronASTNode):
     """Base class for <extends> tag representations used to extend a Rule with another rule."""
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class ExtendsById(Extends):
     """Represents an <extends> tag which points to an abstract rule in this Schema.
 
@@ -403,7 +424,7 @@ class ExtendsById(Extends):
     id_ref: str
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class ExtendsExternal(Extends):
     """Represents an <extends> tag which has an AbstractRule loaded from another file.
 
@@ -415,7 +436,7 @@ class ExtendsExternal(Extends):
     file_path: Path
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class Check(SchematronASTNode):
     """Base class for `<assert>` and `<report>` elements.
 
@@ -450,17 +471,17 @@ class Check(SchematronASTNode):
     xml_space: Literal['default', 'preserve'] | None = None
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class Assert(Check):
     """Representation of an `<assert>` tag."""
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class Report(Check):
     """Representation of a `<report>` tag."""
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class Variable(SchematronASTNode):
     """Abstract representation of a `<let>` tag.
 
@@ -474,7 +495,7 @@ class Variable(SchematronASTNode):
     name: str
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class QueryVariable(Variable):
     """Representation of a `<let>` tag with a Query attribute.
 
@@ -484,7 +505,7 @@ class QueryVariable(Variable):
     value: Query
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class XMLVariable(Variable):
     """Representation of a `<let>` tag with the value loaded from the node's content.
 
@@ -497,7 +518,7 @@ class XMLVariable(Variable):
     value: str
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class Paragraph(SchematronASTNode):
     """Representation of a `<p>` tag.
 
@@ -513,7 +534,7 @@ class Paragraph(SchematronASTNode):
     id: str | None = None
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, eq=False)
 class Title(SchematronASTNode):
     """Representation of a `<title>` tag.
 
@@ -523,19 +544,33 @@ class Title(SchematronASTNode):
     content: str
 
 
-@dataclass(slots=True, frozen=True)
-class ValueOf(SchematronASTNode):
+@dataclass(slots=True, frozen=True, eq=False)
+class Query(SchematronASTNode):
+    """Representation of a Query used in the Schematron AST nodes"""
+    query: str
+
+
+@dataclass(slots=True, frozen=True, eq=False)
+class RichTextContent(SchematronASTNode):
+    """Specific subclass for rich text content.
+
+    Rich text in Schematron allows for `<dir>`, `<emph>`, `<span>`, `<value-of>` and sometimes `<name>` elements.
+    In this package we allow `<name>` in all rich text content.
+
+    The non-Schematron specific elements dir, emph and span are handled as text content by the parser. The name and
+    value-of are specified by the AST nodes.
+
+    By subclassing these nodes we allow to group them.
+    """
+
+
+@dataclass(slots=True, frozen=True, eq=False)
+class ValueOf(RichTextContent):
     """Representation of a `<value-of>` node."""
     select: Query
 
 
-@dataclass(slots=True, frozen=True)
-class Name(SchematronASTNode):
+@dataclass(slots=True, frozen=True, eq=False)
+class Name(RichTextContent):
     """Representation of a `<name>` node."""
     path: Query | None = None
-
-
-@dataclass(slots=True, frozen=True)
-class Query(SchematronASTNode):
-    """Representation of a Query used in the Schematron AST nodes"""
-    query: str
