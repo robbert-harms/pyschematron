@@ -129,7 +129,7 @@ class ElementParser(metaclass=ABCMeta):
     def get_rich_content(element: Element,
                          context: ParsingContext,
                          parse_special: bool = True,
-                         remove_namespaces: bool = True) -> list[str | ValueOf | Name]:
+                         remove_namespaces: bool = True) -> tuple[str | ValueOf | Name, ...]:
         """Get the rich content of the provided node.
 
         Args:
@@ -140,8 +140,9 @@ class ElementParser(metaclass=ABCMeta):
             remove_namespaces: if we want to remove the namespaces from the string rendered children
 
         Returns:
-            A list of text and special item nodes. All rich content like <emph> and <b> are rendered as string content.
-                If parse special is True, Nodes of type <value-of> and <name> are parsed to ValueOf and Name.
+            A listing of text and special item nodes. All rich content like <emph> and <b> are rendered
+            as string content. If parse special is True, Nodes of type <value-of> and <name> are parsed
+            to ValueOf and Name.
         """
         content = [element.text]
 
@@ -156,7 +157,7 @@ class ElementParser(metaclass=ABCMeta):
                 content.append(node_to_str(child, remove_namespaces=remove_namespaces))
             content.append(child.tail)
 
-        return [el for el in content if el]
+        return tuple(el for el in content if el)
 
 
 class SchemaParser(ElementParser):
@@ -281,7 +282,7 @@ class DiagnosticsParser(ElementParser):
         for include_node in self._parse_child_tags(element, context, 'include'):
             diagnostics.append(include_node)
 
-        return Diagnostics(diagnostics)
+        return Diagnostics(tuple(diagnostics))
 
 
 class DiagnosticParser(ElementParser):
@@ -313,7 +314,7 @@ class PropertiesParser(ElementParser):
         for include_node in self._parse_child_tags(element, context, 'include'):
             properties.append(include_node)
 
-        return Properties(properties)
+        return Properties(tuple(properties))
 
 
 class PropertyParser(ElementParser):
@@ -496,8 +497,8 @@ class CheckParser(ElementParser):
 
         attribute_handlers = {
             'test': lambda k, v: {k: Query(v)},
-            'diagnostics': lambda k, v: {k: v.split(' ')},
-            'properties': lambda k, v: {k: v.split(' ')},
+            'diagnostics': lambda k, v: {k: tuple(v.split(' '))},
+            'properties': lambda k, v: {k: tuple(v.split(' '))},
             'subject': lambda k, v: {k: Query(v)},
             '{http://www.w3.org/XML/1998/namespace}lang': lambda k, v: {'xml_lang': v},
             '{http://www.w3.org/XML/1998/namespace}space': lambda k, v: {'xml_space': v}

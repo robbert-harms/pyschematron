@@ -362,7 +362,7 @@ class _QueryVariableEvaluator(_VariableEvaluator):
         return self._value.evaluate(context)
 
 
-def _get_variable_evaluators(variables: list[Variable], parser: QueryParser) -> dict[str, _VariableEvaluator]:
+def _get_variable_evaluators(variables: tuple[Variable, ...], parser: QueryParser) -> dict[str, _VariableEvaluator]:
     """Parse a list of Schematron variables into evaluator objects.
 
     Args:

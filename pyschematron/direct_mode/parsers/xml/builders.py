@@ -97,8 +97,8 @@ class ConcreteRuleBuilder(RuleBuilder):
         if 'context' not in self.attributes:
             raise ValueError('A concrete rule must have a context.')
 
-        return ConcreteRule(checks=self.checks, variables=self.variables,
-                            paragraphs=self.paragraphs, extends=self.extends, **self.attributes)
+        return ConcreteRule(checks=tuple(self.checks), variables=tuple(self.variables),
+                            paragraphs=tuple(self.paragraphs), extends=tuple(self.extends), **self.attributes)
 
 
 class AbstractRuleBuilder(RuleBuilder):
@@ -111,8 +111,8 @@ class AbstractRuleBuilder(RuleBuilder):
         if 'id' not in self.attributes:
             raise ValueError('An abstract rule must have an id.')
 
-        return AbstractRule(checks=self.checks, variables=self.variables,
-                            paragraphs=self.paragraphs, extends=self.extends, **self.attributes)
+        return AbstractRule(checks=tuple(self.checks), variables=tuple(self.variables),
+                            paragraphs=tuple(self.paragraphs), extends=tuple(self.extends), **self.attributes)
 
 
 class ExternalRuleBuilder(RuleBuilder):
@@ -122,8 +122,8 @@ class ExternalRuleBuilder(RuleBuilder):
         if 'context' in self.attributes:
             raise ValueError('An external rule can not have a context.')
 
-        return ExternalRule(checks=self.checks, variables=self.variables,
-                            paragraphs=self.paragraphs, extends=self.extends, **self.attributes)
+        return ExternalRule(checks=tuple(self.checks), variables=tuple(self.variables),
+                            paragraphs=tuple(self.paragraphs), extends=tuple(self.extends), **self.attributes)
 
 
 class PatternBuilder(SchematronASTNodeBuilder, metaclass=ABCMeta):
@@ -205,23 +205,23 @@ class ConcretePatternBuilder(PatternBuilder):
 
     @override
     def build(self) -> ConcretePattern:
-        return ConcretePattern(rules=self.rules, variables=self.variables, paragraphs=self.paragraphs,
-                               title=self.title, **self.attributes)
+        return ConcretePattern(rules=tuple(self.rules), variables=tuple(self.variables),
+                               paragraphs=tuple(self.paragraphs), title=self.title, **self.attributes)
 
 
 class AbstractPatternBuilder(PatternBuilder):
 
     @override
     def build(self) -> AbstractPattern:
-        return AbstractPattern(rules=self.rules, variables=self.variables, paragraphs=self.paragraphs,
-                               title=self.title, **self.attributes)
+        return AbstractPattern(rules=tuple(self.rules), variables=tuple(self.variables),
+                               paragraphs=tuple(self.paragraphs), title=self.title, **self.attributes)
 
 
 class InstancePatternBuilder(PatternBuilder):
 
     @override
     def build(self) -> InstancePattern:
-        return InstancePattern(params=self.pattern_parameters, **self.attributes)
+        return InstancePattern(params=tuple(self.pattern_parameters), **self.attributes)
 
 
 class PhaseBuilder(SchematronASTNodeBuilder):
@@ -235,7 +235,8 @@ class PhaseBuilder(SchematronASTNodeBuilder):
 
     @override
     def build(self) -> Phase:
-        return Phase(active=self.active, variables=self.variables, paragraphs=self.paragraphs, **self.attributes)
+        return Phase(active=tuple(self.active), variables=tuple(self.variables),
+                     paragraphs=tuple(self.paragraphs), **self.attributes)
 
     def add_active(self, nodes: list[ActivePhase]):
         """Add a list of ActivePhase nodes
@@ -296,9 +297,9 @@ class SchemaBuilder(SchematronASTNodeBuilder):
 
     @override
     def build(self) -> Schema:
-        return Schema(patterns=self.patterns, namespaces=self.namespaces, phases=self.phases,
-                      paragraphs=self.paragraphs, variables=self.variables,
-                      diagnostics=self.diagnostics, properties=self.properties, title=self.title,
+        return Schema(patterns=tuple(self.patterns), namespaces=tuple(self.namespaces), phases=tuple(self.phases),
+                      paragraphs=tuple(self.paragraphs), variables=tuple(self.variables),
+                      diagnostics=tuple(self.diagnostics), properties=tuple(self.properties), title=self.title,
                       **self.attributes)
 
     def add_patterns(self, nodes: list[Pattern]):

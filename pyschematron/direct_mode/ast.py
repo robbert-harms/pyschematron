@@ -12,7 +12,7 @@ __maintainer__ = 'Robbert Harms'
 __email__ = 'robbert@xkls.nl'
 __licence__ = 'GPL v3'
 
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Literal, Iterable, Mapping, Any, Self
 
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from pyschematron.direct_mode.lib.ast_visitors import ASTVisitor
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class SchematronASTNode:
     """Base class for all Schematron AST nodes.
 
@@ -29,6 +29,11 @@ class SchematronASTNode:
     we implement our own equality and hash functions, transforming all lists into tuples for the sake of comparing and
     hashing.
     """
+
+    def __post_init__(self):
+        for field_name, value in self.get_init_values().items():
+            if isinstance(value, list):
+                raise ValueError(f'No lists allowed for field "{field_name}", use a tuple instead.')
 
     def accept_visitor(self, visitor: ASTVisitor) -> Any:
         """Accept a visitor on this node.
@@ -88,37 +93,21 @@ class SchematronASTNode:
 
         return get_ast_nodes(self.get_init_values())
 
-    def __eq__(self, other):
-        """Compare the other object against this class based on the values provided at class initialization."""
-        if type(other) is type(self):
-            return self.get_init_values() == other.get_init_values()
-        return False
 
-    def __hash__(self):
-        """Hash this object assuming a list as a tuple."""
-        items = []
-        for k, v in self.get_init_values().items():
-            if isinstance(v, list):
-                items.append((k, tuple(v)))
-            else:
-                items.append((k, v))
-        return hash(tuple(items))
-
-
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class Schema(SchematronASTNode):
     """Representation of a `<schema>` tag.
 
     Although the standard only supports one `<diagnostics>` and `<properties>` element, we support multiple.
 
     Args:
-        patterns: the list of patterns
-        namespaces: the list of namespaces
-        phases: the list of phases
-        diagnostics: the list of diagnostics
-        properties: the list of properties
-        paragraphs: the list of paragraphs
-        variables: the list of variables
+        patterns: the listing of patterns
+        namespaces: the listing of namespaces
+        phases: the listing of phases
+        diagnostics: the listing of diagnostics
+        properties: the listing of properties
+        paragraphs: the listing of paragraphs
+        variables: the listing of variables
         title: the title of this scheme.
         default_phase: reference to the default phase of this Schema
         fpi: formal public identifier, a system-independent ID of this test
@@ -130,13 +119,13 @@ class Schema(SchematronASTNode):
         xml_lang: the default natural language for this node
         xml_space: defines how whitespace must be handled for this element.
     """
-    patterns: list[Pattern] = field(default_factory=list)
-    namespaces: list[Namespace] = field(default_factory=list)
-    phases: list[Phase] = field(default_factory=list)
-    diagnostics: list[Diagnostics] = field(default_factory=list)
-    properties: list[Properties] = field(default_factory=list)
-    paragraphs: list[Paragraph] = field(default_factory=list)
-    variables: list[Variable] = field(default_factory=list)
+    patterns: tuple[Pattern, ...] = tuple()
+    namespaces: tuple[Namespace, ...] = tuple()
+    phases: tuple[Phase, ...] = tuple()
+    diagnostics: tuple[Diagnostics, ...] = tuple()
+    properties: tuple[Properties, ...] = tuple()
+    paragraphs: tuple[Paragraph, ...] = tuple()
+    variables: tuple[Variable, ...] = tuple()
     title: Title | None = None
 
     default_phase: str | None = None
@@ -150,7 +139,7 @@ class Schema(SchematronASTNode):
     xml_space: Literal['default', 'preserve'] | None = None
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class Namespace(SchematronASTNode):
     """Representation of an `<ns>` tag.
 
@@ -162,7 +151,7 @@ class Namespace(SchematronASTNode):
     uri: str
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class Phase(SchematronASTNode):
     """Representation of a `<phase>` tag.
 
@@ -171,8 +160,8 @@ class Phase(SchematronASTNode):
 
     Args:
         id: the identifier of this element
-        active: list of identifiers of active patterns
-        variables: list of variables scoped within this execution
+        active: listing of identifiers of active patterns
+        variables: listing of variables scoped within this execution
         paragraphs: documentation paragraphs
         fpi: formal public identifier, a system-independent ID of this test
         icon: reference to a graphic file to be used in the error message
@@ -181,9 +170,9 @@ class Phase(SchematronASTNode):
         xml_space: defines how whitespace must be handled for this element.
     """
     id: str
-    active: list[ActivePhase] = field(default_factory=list)
-    variables: list[Variable] = field(default_factory=list)
-    paragraphs: list[Paragraph] = field(default_factory=list)
+    active: tuple[ActivePhase, ...] = tuple()
+    variables: tuple[Variable, ...] = tuple()
+    paragraphs: tuple[Paragraph, ...] = tuple()
     fpi: str | None = None
     icon: str | None = None
     see: str | None = None
@@ -191,7 +180,7 @@ class Phase(SchematronASTNode):
     xml_space: Literal['default', 'preserve'] | None = None
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class ActivePhase(SchematronASTNode):
     """Representation of a `<active>` tag.
 
@@ -203,17 +192,17 @@ class ActivePhase(SchematronASTNode):
     content: str | None = None
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class Diagnostics(SchematronASTNode):
     """Representation of a `<diagnostics>` tag.
 
     Args:
-        diagnostics: the list of Diagnostic classes
+        diagnostics: the listing of Diagnostic classes
     """
-    diagnostics: list[Diagnostic]
+    diagnostics: tuple[Diagnostic, ...]
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class Diagnostic(SchematronASTNode):
     """Representation of a `<diagnostic>` tag.
 
@@ -229,7 +218,7 @@ class Diagnostic(SchematronASTNode):
         xml_lang: the default natural language for this node
         xml_space: defines how whitespace must be handled for this element.
     """
-    content: list[str | ValueOf | Name]
+    content: tuple[str | ValueOf | Name, ...]
     id: str
     fpi: str | None = None
     icon: str | None = None
@@ -239,17 +228,17 @@ class Diagnostic(SchematronASTNode):
     xml_space: Literal['default', 'preserve'] | None = None
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class Properties(SchematronASTNode):
     """Representation of a `<properties>` tag.
 
     Args:
-        properties: the list of Property classes
+        properties: the listing of Property classes
     """
-    properties: list[Property]
+    properties: tuple[Property, ...]
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class Property(SchematronASTNode):
     """Representation of a `<property>` tag.
 
@@ -259,13 +248,13 @@ class Property(SchematronASTNode):
         role: a description of the error message or the rule
         scheme: An IRI or public identifier specifying the notation used for the node's value.
     """
-    content: list[str | ValueOf | Name]
+    content: tuple[str | ValueOf | Name, ...]
     id: str
     role: str | None = None
     scheme: str | None = None
 
 
-@dataclass(slots=True, kw_only=True, frozen=True, eq=False)
+@dataclass(slots=True, kw_only=True, frozen=True)
 class Pattern(SchematronASTNode):
     """Abstract representation of a <pattern> tag.
 
@@ -292,50 +281,50 @@ class Pattern(SchematronASTNode):
     xml_space: Literal['default', 'preserve'] | None = None
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class ConcretePattern(Pattern):
     """A concrete pattern, this neither inherits another pattern, nor is an abstract pattern.
 
     Args:
-        rules: the list of rules
-        variables: the list of variables
+        rules: the listing of rules
+        variables: the listing of variables
         title: the title of this pattern
-        paragraphs: the list of paragraphs
+        paragraphs: the listing of paragraphs
     """
-    rules: list[Rule] = field(default_factory=list)
-    variables: list[Variable] = field(default_factory=list)
-    paragraphs: list[Paragraph] = field(default_factory=list)
+    rules: tuple[Rule, ...] = tuple()
+    variables: tuple[Variable, ...] = tuple()
+    paragraphs: tuple[Paragraph, ...] = tuple()
     title: Title | None = None
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class AbstractPattern(Pattern):
     """An abstract pattern, coming from a pattern with the attribute `@abstract` set to True.
 
     Args:
-        rules: the list of rules
-        variables: the list of variables
+        rules: the listing of rules
+        variables: the listing of variables
         title: the title of this pattern
-        paragraphs: the list of paragraphs
+        paragraphs: the listing of paragraphs
     """
-    rules: list[Rule] = field(default_factory=list)
-    variables: list[Variable] = field(default_factory=list)
-    paragraphs: list[Paragraph] = field(default_factory=list)
+    rules: tuple[Rule, ...] = tuple()
+    variables: tuple[Variable, ...] = tuple()
+    paragraphs: tuple[Paragraph, ...] = tuple()
     title: Title | None = None
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class InstancePattern(Pattern):
     """A pattern inheriting another pattern, i.e. patterns with the `is-a` attribute set.
 
     Args:
-        params: the list of pattern parameters
+        params: the listing of pattern parameters
     """
     abstract_id_ref: str
-    params: list[PatternParameter] = field(default_factory=list)
+    params: tuple[PatternParameter, ...] = tuple()
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class PatternParameter(SchematronASTNode):
     """A parameter inside a pattern with the `is-a` attribute set.
 
@@ -347,7 +336,7 @@ class PatternParameter(SchematronASTNode):
     value: str
 
 
-@dataclass(slots=True, kw_only=True, frozen=True, eq=False)
+@dataclass(slots=True, kw_only=True, frozen=True)
 class Rule(SchematronASTNode):
     """Abstract representation of a <rule> tag.
 
@@ -355,9 +344,9 @@ class Rule(SchematronASTNode):
     or external rules.
 
     Args:
-        checks: the list of report and assert items in this rule
-        variables: the list of `<let>` variable declarations in this rule
-        paragraphs: list of paragraphs
+        checks: the listing of report and assert items in this rule
+        variables: the listing of `<let>` variable declarations in this rule
+        paragraphs: listing of paragraphs
         flag: name of the flag to which this test belongs, is set to True when this test is fired
         fpi: formal public identifier, a system-independent ID of this test
         icon: reference to a graphic file to be used in the error message
@@ -367,10 +356,10 @@ class Rule(SchematronASTNode):
         xml_lang: the default natural language for this node
         xml_space: defines how whitespace must be handled for this element.
     """
-    checks: list[Check] = field(default_factory=list)
-    variables: list[Variable] = field(default_factory=list)
-    paragraphs: list[Paragraph] = field(default_factory=list)
-    extends: list[Extends] = field(default_factory=list)
+    checks: tuple[Check, ...] = tuple()
+    variables: tuple[Variable, ...] = tuple()
+    paragraphs: tuple[Paragraph, ...] = tuple()
+    extends: tuple[Extends, ...] = tuple()
     flag: str | None = None
     fpi: str | None = None
     icon: str | None = None
@@ -381,7 +370,7 @@ class Rule(SchematronASTNode):
     xml_space: Literal['default', 'preserve'] | None = None
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class ConcreteRule(Rule):
     """Representation of a concrete <rule> tag (e.g. not abstract).
 
@@ -393,7 +382,7 @@ class ConcreteRule(Rule):
     id: str | None = None
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class AbstractRule(Rule):
     """Representation of an abstract <rule> tag.
 
@@ -403,18 +392,18 @@ class AbstractRule(Rule):
     id: str
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class ExternalRule(Rule):
     """Representation of an <rule> loaded from an external file using extends."""
     id: str | None = None
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class Extends(SchematronASTNode):
     """Base class for <extends> tag representations used to extend a Rule with another rule."""
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class ExtendsById(Extends):
     """Represents an <extends> tag which points to an abstract rule in this Schema.
 
@@ -424,19 +413,19 @@ class ExtendsById(Extends):
     id_ref: str
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class ExtendsExternal(Extends):
     """Represents an <extends> tag which has an AbstractRule loaded from another file.
 
     Args:
         rule: an ExternalRule loaded from another file.
-        path: the path from which the rule was loaded
+        file_path: the path from which the rule was loaded
     """
     rule: ExternalRule
     file_path: Path
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class Check(SchematronASTNode):
     """Base class for `<assert>` and `<report>` elements.
 
@@ -444,12 +433,12 @@ class Check(SchematronASTNode):
         test: the attribute with the test condition
         content: the mixed text content, can contain `<emph>`, `<span>`, `<dir>`,
             `<value-of>`, and `<name>` as flat text.
-        diagnostics: list of IDs referencing a diagnostic elements
+        diagnostics: listing of IDs referencing a diagnostic elements
         flag: name of the flag to which this test belongs, is set to True when this test is fired
         fpi: formal public identifier, a system-independent ID of this test
         icon: reference to a graphic file to be used in the error message
         id: the identifier of this test
-        properties: list of identifiers of property items
+        properties: listing of identifiers of property items
         role: a description of the error message or the rule
         see: a URI or URL referencing background information
         subject: a query referencing the node to which we assign an error message
@@ -457,13 +446,13 @@ class Check(SchematronASTNode):
         xml_space: defines how whitespace must be handled for this element.
     """
     test: Query
-    content: list[str | ValueOf | Name]
-    diagnostics: list[str] | None = None
+    content: tuple[str | ValueOf | Name, ...]
+    diagnostics: tuple[str, ...] | None = None
     flag: str | None = None
     fpi: str | None = None
     icon: str | None = None
     id: str | None = None
-    properties: list[str] | None = None
+    properties: tuple[str, ...] | None = None
     role: str | None = None
     see: str | None = None
     subject: Query | None = None
@@ -471,17 +460,17 @@ class Check(SchematronASTNode):
     xml_space: Literal['default', 'preserve'] | None = None
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class Assert(Check):
     """Representation of an `<assert>` tag."""
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class Report(Check):
     """Representation of a `<report>` tag."""
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class Variable(SchematronASTNode):
     """Abstract representation of a `<let>` tag.
 
@@ -495,7 +484,7 @@ class Variable(SchematronASTNode):
     name: str
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class QueryVariable(Variable):
     """Representation of a `<let>` tag with a Query attribute.
 
@@ -505,7 +494,7 @@ class QueryVariable(Variable):
     value: Query
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class XMLVariable(Variable):
     """Representation of a `<let>` tag with the value loaded from the node's content.
 
@@ -518,7 +507,7 @@ class XMLVariable(Variable):
     value: str
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class Paragraph(SchematronASTNode):
     """Representation of a `<p>` tag.
 
@@ -534,7 +523,7 @@ class Paragraph(SchematronASTNode):
     id: str | None = None
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class Title(SchematronASTNode):
     """Representation of a `<title>` tag.
 
@@ -544,13 +533,13 @@ class Title(SchematronASTNode):
     content: str
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class Query(SchematronASTNode):
     """Representation of a Query used in the Schematron AST nodes"""
     query: str
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class RichTextContent(SchematronASTNode):
     """Specific subclass for rich text content.
 
@@ -564,13 +553,13 @@ class RichTextContent(SchematronASTNode):
     """
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class ValueOf(RichTextContent):
     """Representation of a `<value-of>` node."""
     select: Query
 
 
-@dataclass(slots=True, frozen=True, eq=False)
+@dataclass(slots=True, frozen=True)
 class Name(RichTextContent):
     """Representation of a `<name>` node."""
     path: Query | None = None

@@ -155,7 +155,7 @@ class ResolveExtendsVisitor(ASTVisitor):
         patterns = []
         for pattern in schema.patterns:
             patterns.append(ResolveExtendsVisitor(self._schema).apply(pattern))
-        return schema.with_updated(patterns=patterns)
+        return schema.with_updated(patterns=tuple(patterns))
 
     def _process_pattern(self, pattern: ConcretePattern | AbstractPattern) -> ConcretePattern | AbstractPattern:
         """Process a pattern by processing all the rules.
@@ -171,7 +171,7 @@ class ResolveExtendsVisitor(ASTVisitor):
             processed_rule = ResolveExtendsVisitor(self._schema).apply(rule)
             if isinstance(processed_rule, ConcreteRule):
                 rules.append(processed_rule)
-        return pattern.with_updated(rules=rules)
+        return pattern.with_updated(rules=tuple(rules))
 
     def _process_rule(self, rule: Rule) -> Rule:
         """Process a rule by inlining all the extends.
@@ -189,9 +189,9 @@ class ResolveExtendsVisitor(ASTVisitor):
             extra_checks.extend(extended_rule.checks)
             extra_variables.extend(extended_rule.variables)
 
-        checks = extra_checks + rule.checks
-        variables = extra_variables + rule.variables
-        return rule.with_updated(checks=checks, variables=variables, extends=[])
+        checks = tuple(extra_checks) + rule.checks
+        variables = tuple(extra_variables) + rule.variables
+        return rule.with_updated(checks=checks, variables=variables, extends=tuple())
 
     def _process_extends_by_id(self, extends: ExtendsById) -> AbstractRule:
         """Process an extends which points to an abstract rule.
@@ -258,7 +258,7 @@ class ResolveAbstractPatternsVisitor(ASTVisitor):
             if isinstance(new_pattern, ConcretePattern):
                 patterns.append(new_pattern)
 
-        return schema.with_updated(patterns=patterns)
+        return schema.with_updated(patterns=tuple(patterns))
 
     def _process_instance_pattern(self, instance_pattern: InstancePattern) -> ConcretePattern:
         """Process an instance-of pattern by expanding it with an abstract pattern.
@@ -322,7 +322,7 @@ class MacroExpandVisitor(ASTVisitor):
             elif isinstance(value, Mapping):
                 return {k: _expand_value(v) for k, v in value.items()}
             elif isinstance(value, Iterable):
-                return [_expand_value(el) for el in value]
+                return tuple(_expand_value(el) for el in value)
             else:
                 return value
 
@@ -380,8 +380,8 @@ class PhaseSelectionVisitor(ASTVisitor):
         Returns:
             A processed schema
         """
-        patterns = [pattern for pattern in schema.patterns if self.apply(pattern)]
-        phases = [phase for phase in schema.phases if self.apply(phase)]
+        patterns = tuple(pattern for pattern in schema.patterns if self.apply(pattern))
+        phases = tuple(phase for phase in schema.phases if self.apply(phase))
         return schema.with_updated(patterns=patterns, phases=phases)
 
     def _process_pattern(self, pattern: Pattern) -> bool:
