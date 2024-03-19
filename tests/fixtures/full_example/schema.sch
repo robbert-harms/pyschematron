@@ -3,12 +3,14 @@
         schemaVersion="iso"
         defaultPhase="check-weights"
         queryBinding="xslt3"
-        xml:lang="en">
+        xml:lang="en"
+        fpi="-//PYSCHEMATRON//DTD XML 1.0//EN">
 
     <title>Cargo checking</title>
     <ns prefix="c" uri="http://www.amazing-cargo.com/xml/data/2023"/>
     <p>This checks the cargo manifest on weight, size, and vehicles on number of wheels.
         By default it checks on weight only.</p>
+    <p class="some-class" id="some-paragraph-id" icon="smiley" xml:lang="en">A second paragraph to test if this is processed correctly.</p>
 
     <!-- Showing dynamic variables. -->
     <let name="max-weight" value="xs:integer(/c:cargo/c:vehicles[1]/c:apple[1]/@weight)"/> <!-- kg -->

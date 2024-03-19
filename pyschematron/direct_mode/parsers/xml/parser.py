@@ -450,7 +450,17 @@ class ParagraphParser(ElementParser):
 
     @override
     def parse(self, element: Element, context: ParsingContext) -> Paragraph:
-        attributes = parse_attributes(element.attrib, ['icon', 'id', 'class'], {'class': lambda k, v: {'class_': v}})
+        allowed_attributes = ['icon', 'id', 'class',
+                              '{http://www.w3.org/XML/1998/namespace}lang',
+                              '{http://www.w3.org/XML/1998/namespace}space']
+
+        attribute_handlers = {
+            'class': lambda k, v: {'class_': v},
+            '{http://www.w3.org/XML/1998/namespace}lang': lambda k, v: {'xml_lang': v},
+            '{http://www.w3.org/XML/1998/namespace}space': lambda k, v: {'xml_space': v}
+        }
+
+        attributes = parse_attributes(element.attrib, allowed_attributes, attribute_handlers)
         content = ''.join(self.get_rich_content(element, context, parse_special=False))
         return Paragraph(content=content, **attributes)
 

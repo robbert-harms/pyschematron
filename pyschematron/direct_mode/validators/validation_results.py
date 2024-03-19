@@ -8,12 +8,14 @@ __licence__ = 'GPL v3'
 
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Literal
 
 from lxml.etree import ElementTree
 
 from elementpath.xpath_context import ItemArgType, DocumentNode
 
-from pyschematron.direct_mode.ast import ConcreteRule, Assert, Report, ConcretePattern
+from pyschematron.direct_mode.ast import ConcreteRule, Assert, Report, ConcretePattern, Schema
 from pyschematron.direct_mode.validators.queries.base import EvaluationContext
 
 
@@ -29,12 +31,41 @@ class XMLDocumentValidationResult(ValidationResult):
     This encapsulates the processing of all patterns over all nodes.
 
     Args:
-
+        xml_information: the knowledge of the XML
+        schema_information: information about the applied Schema
         node_results: the results over all nodes
+    """
+    xml_information: XMLInformation
+    schema_information: SchemaInformation
+    node_results: tuple[FullNodeResult, ...]
+
+
+@dataclass(slots=True, frozen=True)
+class XMLInformation(ValidationResult):
+    """Container for the knowledge of the XML being validated.
+
+    This encapsulates the processing of all patterns over all nodes.
+
+    Args:
+        xml_document: the XML document provided as input
+        xml_tree: xpath node wrapping the XML, this is the tree used during validation
     """
     xml_document: ElementTree
     xml_tree: DocumentNode
-    node_results: list[FullNodeResult]
+
+
+@dataclass(slots=True, frozen=True)
+class SchemaInformation(ValidationResult):
+    """Container for the information of the Schematron used during validation.
+
+    Args:
+        schema: the Schema AST node used during evaluation
+        phase: the phase used in evaluation
+        schematron_base_path: the base path from which we loaded the Schematron file, provided for context.
+    """
+    schema: Schema
+    phase: str | Literal['#ALL', '#DEFAULT'] | None = None,
+    schematron_base_path: Path | None = None
 
 
 @dataclass(slots=True, frozen=True)
@@ -60,7 +91,7 @@ class FullNodeResult(BaseXMLNodeResult):
     Args:
         pattern_results: the results of all the patterns
     """
-    pattern_results: list[PatternResult]
+    pattern_results: tuple[PatternResult, ...]
 
 
 @dataclass(slots=True, frozen=True)
@@ -72,7 +103,7 @@ class PatternResult(BaseXMLNodeResult):
         rule_results: a list of the rule results for each rule in the pattern.
     """
     pattern: ConcretePattern
-    rule_results: list[RuleResult]
+    rule_results: tuple[RuleResult, ...]
 
     def has_fired_rule(self) -> bool:
         """Check if this pattern result has a fired rule or not.

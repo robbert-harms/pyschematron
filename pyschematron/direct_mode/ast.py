@@ -265,6 +265,8 @@ class Pattern(SchematronASTNode):
     rule is applied.
 
     Args:
+        documents: xpath expression evaluating into one or more documents which must be checked instead of the
+            current document.
         id: the identifier of this test
         fpi: formal public identifier, a system-independent ID of this test
         icon: reference to a graphic file to be used in the error message
@@ -272,7 +274,7 @@ class Pattern(SchematronASTNode):
         xml_lang: the default natural language for this node
         xml_space: defines how whitespace must be handled for this element.
     """
-    documents: Query | None = None
+    documents: XPathExpression | None = None
     id: str | None = None
     fpi: str | None = None
     icon: str | None = None
@@ -511,16 +513,23 @@ class XMLVariable(Variable):
 class Paragraph(SchematronASTNode):
     """Representation of a `<p>` tag.
 
+    Although the Schematron ISO standard does not prescribe the `xml:lang` and `xml:space` attribute for paragraphs, we
+    add them nonetheless.
+
     Args:
         content: the text content of this paragraph
         class_: the class attribute
         icon: the icon attribute
         id: the identifier
+        xml_lang: the default natural language for this node
+        xml_space: defines how whitespace must be handled for this element.
     """
     content: str
     class_: str | None = None
     icon: str | None = None
     id: str | None = None
+    xml_lang: str | None = None
+    xml_space: Literal['default', 'preserve'] | None = None
 
 
 @dataclass(slots=True, frozen=True)
@@ -537,6 +546,16 @@ class Title(SchematronASTNode):
 class Query(SchematronASTNode):
     """Representation of a Query used in the Schematron AST nodes"""
     query: str
+
+
+@dataclass(slots=True, frozen=True)
+class XPathExpression(SchematronASTNode):
+    """Representation of an XPath expression.
+
+    Since Schematron queries are abstract entities defined by the query binding in the Schematron root, we also need
+    an XPath expression object for elements which may only be XPath expressions.
+    """
+    expression: str
 
 
 @dataclass(slots=True, frozen=True)

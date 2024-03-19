@@ -20,10 +20,11 @@ from pyschematron.direct_mode.lib.ast_visitors import (ResolveExtendsVisitor, Re
                                                        PhaseSelectionVisitor)
 from pyschematron.direct_mode.validators.queries.base import EvaluationContext, Query, QueryParser, CachingQueryParser
 from pyschematron.direct_mode.validators.queries.factories import SimpleQueryProcessorFactory
-from pyschematron.direct_mode.validators.validation_results import (CheckResult, RuleResult, PatternResult,
+from pyschematron.direct_mode.validators.validation_results import (CheckResult, PatternResult,
                                                                     FullNodeResult, XMLDocumentValidationResult,
                                                                     SuppressedRuleResult, FiredRuleResult,
-                                                                    SkippedRuleResult)
+                                                                    SkippedRuleResult, XMLInformation,
+                                                                    SchemaInformation)
 
 
 class SchematronXMLValidator(metaclass=ABCMeta):
@@ -91,7 +92,9 @@ class SimpleSchematronXMLValidator(SchematronXMLValidator):
                     if node_result := self._validate_node(attribute, context):
                         node_results.append(node_result)
 
-        return XMLDocumentValidationResult(xml_document, xml_tree, node_results)
+        xml_information = XMLInformation(xml_document, xml_tree)
+        schema_information = SchemaInformation(self._schema, self._phase, self._schematron_base_path)
+        return XMLDocumentValidationResult(xml_information, schema_information, tuple(node_results))
 
     def _validate_node(self, node: ItemArgType, evaluation_context: EvaluationContext) -> FullNodeResult:
         """Validate the indicated XML node.
@@ -107,7 +110,7 @@ class SimpleSchematronXMLValidator(SchematronXMLValidator):
         for pattern_validator in self._pattern_validators:
             pattern_results.append(pattern_validator.validate(node, evaluation_context))
 
-        return FullNodeResult(node, evaluation_context, pattern_results)
+        return FullNodeResult(node, evaluation_context, tuple(pattern_results))
 
     def _reduce_schema_to_phase(self, schema: Schema, phase: str | Literal['#ALL', '#DEFAULT'] | None = None) -> Schema:
         """Reduce an AST to only those patterns and phases referenced by a specific phase.
@@ -201,7 +204,7 @@ class _PatternValidator:
             else:
                 rule_results.append(rule_result)
 
-        return PatternResult(xml_node, evaluation_context, self._pattern, rule_results)
+        return PatternResult(xml_node, evaluation_context, self._pattern, tuple(rule_results))
 
     def _get_rule_validators(self) -> list[_RuleValidator]:
         """Initialize the rule validators.
