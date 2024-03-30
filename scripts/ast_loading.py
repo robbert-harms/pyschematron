@@ -5,9 +5,9 @@ __email__ = 'robbert@altoida.com'
 
 from pathlib import Path
 
-from pyschematron.direct_mode.lib.ast_visitors import ResolveExtendsVisitor, ResolveAbstractPatternsVisitor
-from pyschematron.direct_mode.lib.ast_yaml import RuyamlASTYamlConverter
-from pyschematron.direct_mode.parsers.xml.parser import ParsingContext, SchemaParser
+from pyschematron.direct_mode.schematron.ast_visitors import ResolveExtendsVisitor, ResolveAbstractPatternsVisitor
+from pyschematron.direct_mode.schematron.ast_yaml import RuyamlASTYamlConverter
+from pyschematron.direct_mode.schematron.parsers.xml.parser import ParsingContext, SchemaParser
 from pyschematron.utils import load_xml_document
 
 

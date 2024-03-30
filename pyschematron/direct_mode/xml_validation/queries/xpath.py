@@ -22,8 +22,8 @@ from elementpath.xpath31 import XPath31Parser
 from elementpath.xpath_context import ItemArgType
 from elementpath.tree_builders import RootArgType
 
-from pyschematron.direct_mode.validators.queries.base import QueryParser, Query, EvaluationContext
-from pyschematron.direct_mode.validators.queries.exceptions import MissingRootNodeError
+from pyschematron.direct_mode.xml_validation.queries.base import QueryParser, Query, EvaluationContext
+from pyschematron.direct_mode.xml_validation.queries.exceptions import MissingRootNodeError
 
 
 class XPathQueryParser(QueryParser, metaclass=ABCMeta):
@@ -189,6 +189,14 @@ class XPathEvaluationContext(EvaluationContext):
             return self._get_updated({'variables': variables})
         else:
             return self._get_updated({'variables': self._context_variables['variables'] | variables})
+
+    @override
+    def get_xml_root(self) -> RootArgType | None:
+        return self._context_variables['root']
+
+    @override
+    def get_context_item(self) -> ItemArgType | None:
+        return self._context_variables['item']
 
     def _get_updated(self, updates: dict[str, Any]) -> Self:
         kwargs = self._context_variables.copy()

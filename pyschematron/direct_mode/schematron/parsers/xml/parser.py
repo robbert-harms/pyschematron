@@ -6,20 +6,22 @@ __email__ = 'robbert@altoida.com'
 import os
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
-from typing import Type, override
+from typing import override
 
 import elementpath
 
 from lxml import etree
 from lxml.etree import Element
 
-from pyschematron.direct_mode.ast import Schema, Check, Assert, SchematronASTNode, Pattern, Rule, Report, Variable, \
+from pyschematron.direct_mode.schematron.ast import Schema, Check, Assert, SchematronASTNode, Pattern, Rule, Report, \
+    Variable, \
     Paragraph, ExtendsById, Extends, ExtendsExternal, ExternalRule, Query, QueryVariable, XMLVariable, \
-    Namespace, Title, PatternParameter, ValueOf, Name, Phase, ActivePhase, Diagnostic, Diagnostics, Properties, Property
-from pyschematron.direct_mode.parsers.xml.builders import ConcreteRuleBuilder, ExternalRuleBuilder, \
+    Namespace, Title, PatternParameter, ValueOf, Name, Phase, ActivePhase, Diagnostic, Diagnostics, Properties, \
+    Property, XPathExpression
+from pyschematron.direct_mode.schematron.parsers.xml.builders import ConcreteRuleBuilder, ExternalRuleBuilder, \
     AbstractRuleBuilder, ConcretePatternBuilder, SchemaBuilder, AbstractPatternBuilder, \
     InstancePatternBuilder, PhaseBuilder
-from pyschematron.direct_mode.parsers.xml.utils import node_to_str, resolve_href, parse_attributes
+from pyschematron.direct_mode.schematron.parsers.xml.utils import node_to_str, resolve_href, parse_attributes
 from pyschematron.utils import load_xml_document
 
 
@@ -109,7 +111,7 @@ class ElementParser(metaclass=ABCMeta):
         """
 
     @staticmethod
-    def _parse_child_tags(element: Element, context: ParsingContext, xml_tag: str) -> list[SchematronASTNode]:
+    def _parse_child_tags[T: Element](element: T, context: ParsingContext, xml_tag: str) -> list[T]:
         """Parse a sequence of XML elements with the same tag name.
 
         Args:
@@ -490,7 +492,7 @@ class ExtendsParser(ElementParser):
 
 class CheckParser(ElementParser):
 
-    def __init__(self, type_instance: Type[Check]):
+    def __init__(self, type_instance: type[Check]):
         """Base parser for the <assert> and <report> checks.
 
         Args:
@@ -509,7 +511,7 @@ class CheckParser(ElementParser):
             'test': lambda k, v: {k: Query(v)},
             'diagnostics': lambda k, v: {k: tuple(v.split(' '))},
             'properties': lambda k, v: {k: tuple(v.split(' '))},
-            'subject': lambda k, v: {k: Query(v)},
+            'subject': lambda k, v: {k: XPathExpression(v)},
             '{http://www.w3.org/XML/1998/namespace}lang': lambda k, v: {'xml_lang': v},
             '{http://www.w3.org/XML/1998/namespace}space': lambda k, v: {'xml_space': v}
         }

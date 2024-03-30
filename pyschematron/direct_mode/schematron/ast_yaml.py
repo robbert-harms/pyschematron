@@ -10,12 +10,12 @@ import inspect
 from abc import ABCMeta, abstractmethod
 from io import StringIO
 from pathlib import PosixPath, Path
-from typing import Callable, Any, Type, Mapping, Iterable
+from typing import Callable, Any, Mapping, Iterable
 
 from ruyaml import YAML, BaseRepresenter, BaseConstructor, Node
 
-import pyschematron.direct_mode.ast
-from pyschematron.direct_mode.ast import SchematronASTNode
+import pyschematron.direct_mode.schematron.ast
+from pyschematron.direct_mode.schematron.ast import SchematronASTNode
 
 
 class ASTYamlConverter(metaclass=ABCMeta):
@@ -106,7 +106,7 @@ class _ASTYamlCodec(YAML):
         ast_nodes = self._list_representable_ast_nodes()
         return [self._get_representer(ast_node) for ast_node in ast_nodes]
 
-    def _list_representable_ast_nodes(self) -> list[Type[SchematronASTNode]]:
+    def _list_representable_ast_nodes(self) -> list[type[SchematronASTNode]]:
         """List the representable AST nodes.
 
         Returns:
@@ -114,9 +114,9 @@ class _ASTYamlCodec(YAML):
         """
         def filter_function(el):
             return inspect.isclass(el) and issubclass(el, SchematronASTNode) and el is not SchematronASTNode
-        return [el[1] for el in inspect.getmembers(pyschematron.direct_mode.ast, filter_function)]
+        return [el[1] for el in inspect.getmembers(pyschematron.direct_mode.schematron.ast, filter_function)]
 
-    def _get_representer(self, ast_node: Type[SchematronASTNode]) -> "YamlRepresenter":
+    def _get_representer(self, ast_node: type[SchematronASTNode]) -> "YamlRepresenter":
         """Get a representor for the indicated node type.
 
         Args:
@@ -215,7 +215,7 @@ class ASTNodeYamlRepresenter(YamlRepresenter):
 
 class GenericASTNodeYamlRepresenter(ASTNodeYamlRepresenter):
 
-    def __init__(self, node_type: Type[SchematronASTNode]):
+    def __init__(self, node_type: type[SchematronASTNode]):
         """Create a basic representer for :class:`SchematronASTNode`.
 
         When loading a YAML, this class returns :class:`SchematronASTNodeBuilder` nodes.
@@ -226,7 +226,7 @@ class GenericASTNodeYamlRepresenter(ASTNodeYamlRepresenter):
         self._node_type = node_type
 
     @property
-    def element_class(self) -> Type[SchematronASTNode]:
+    def element_class(self) -> type[SchematronASTNode]:
         return self._node_type
 
     @property
@@ -264,7 +264,7 @@ class SchematronASTNodeBuilder(metaclass=ABCMeta):
 
 class DictionaryNodeBuilder(SchematronASTNodeBuilder):
 
-    def __init__(self, node_type: Type[SchematronASTNode], init_values: dict):
+    def __init__(self, node_type: type[SchematronASTNode], init_values: dict):
         """Construct a Schematron AST node using a dictionary containing the init values.
 
         During the build phase, this builder will transform the provided init values according to these rules:

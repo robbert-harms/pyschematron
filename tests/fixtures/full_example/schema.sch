@@ -45,10 +45,20 @@
         </rule>
     </pattern>
 
+    <!-- Showing the use of subject in a rule, and check -->
+    <pattern id="pa_check-banana">
+        <p>Just a check on the banana's.</p>
+        <rule subject="/c:cargo[1]" context="c:banana">
+            <report test="@type = 'fruit'">Banana is a fruit.</report>
+            <report subject="." test="@weight = 1">And the weight of the banana shall be 1.</report>
+        </rule>
+    </pattern>
+
     <pattern>
         <rule abstract="true" id="ru_abstract-volume-check">
             <assert test="xs:integer(@volume) le $max-volume" properties="pr_maxVolume pr_volume">
                 Volume not correct (<value-of select="@volume"/> vs <value-of select="$max-volume"/> at <name/>).
+                Testing name with path: <name path="//c:cargo"/>
             </assert>
             <report test="xs:integer(@volume) gt $max-volume">
                 We report an item with a volume greater than allowed.
@@ -57,7 +67,7 @@
     </pattern>
 
     <!-- Showcasing that we support checks on processing instructions. -->
-    <pattern>
+    <pattern id="pa_processing-instructions-test">
         <rule id="ru_processing-instructions-test" context="processing-instruction('xml-model')">
             <assert test="contains(.,'foobar')">
                 XML model processing instruction does not include foobar.
@@ -66,7 +76,7 @@
     </pattern>
 
     <!-- Showcasing that we support checks on comments. -->
-    <pattern>
+    <pattern id="pa_comments-test">
         <rule id="ru_comments-test" context="comment()">
             <assert test="starts-with(., ' Comment: ')">
                 This comment does not start with "Comment: ".
@@ -75,7 +85,7 @@
     </pattern>
 
     <!-- Showcasing that we support checks on attributes. -->
-    <pattern>
+    <pattern id="pa_attribute-test">
         <rule id="ru_attribute-test" context="@id">
             <assert test="starts-with(., 'id_')">
                 The id attribute does not starts with "id_".
@@ -83,14 +93,17 @@
         </rule>
     </pattern>
 
-    <pattern>
+    <!-- Show that we can check the root and check the namespace -->
+    <pattern id="pa_root-test">
         <rule id="ru_root-test" context="c:cargo">
             <assert test="@id">
                 The root node does not have an ID.
             </assert>
+            <assert test="namespace-uri-for-prefix('test', .) = 'http://www.test.com'">
+                The namespace for "test" should be "http://www.test.com".
+            </assert>
         </rule>
     </pattern>
-
 
     <!-- Showcasing abstract patterns -->
     <pattern is-a="pa_check-category" id="pa_check-category-vehicles">

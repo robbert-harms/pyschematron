@@ -7,13 +7,12 @@ from pathlib import Path
 
 from lxml import etree
 
-from pyschematron.direct_mode.lib.ast_visitors import ResolveExtendsVisitor, \
+from pyschematron.direct_mode.schematron.ast_visitors import ResolveExtendsVisitor, \
     ResolveAbstractPatternsVisitor, PhaseSelectionVisitor
-from pyschematron.direct_mode.parsers.xml.parser import ParsingContext, SchemaParser
-from pyschematron.direct_mode.svrl.report import DefaultSVRLReportBuilder
-from pyschematron.direct_mode.validators.validators import SimpleSchematronXMLValidator
+from pyschematron.direct_mode.schematron.parsers.xml.parser import ParsingContext, SchemaParser
+from pyschematron.direct_mode.xml_validation.results.svrl_builder import DefaultSVRLReportBuilder
+from pyschematron.direct_mode.xml_validation.validators import SimpleSchematronXMLValidator
 from pyschematron.utils import load_xml_document
-
 
 '''
 cd programming/python/pyschematron/tests/fixtures/full_example/
@@ -33,13 +32,16 @@ schema = ResolveExtendsVisitor(schema).apply(schema)
 schema = ResolveAbstractPatternsVisitor(schema).apply(schema)
 schema = PhaseSelectionVisitor(schema, phase).apply(schema)
 
-validator = SimpleSchematronXMLValidator(schema, '#ALL', parsing_context.base_path)
+validator = SimpleSchematronXMLValidator(schema, phase, parsing_context.base_path)
 
 xml_document = load_xml_document(example_path / 'cargo.xml')
 validation_results = validator.validate_xml(xml_document)
 
 svrl_report = DefaultSVRLReportBuilder().create_svrl_xml(validation_results)
 report_str = etree.tostring(svrl_report, pretty_print=True).decode('utf-8')
+
+with open('/tmp/report_pyschematron.xml', 'w') as f:
+    f.write(report_str)
 
 print(report_str)
 

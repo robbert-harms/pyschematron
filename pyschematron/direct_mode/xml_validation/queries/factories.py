@@ -9,9 +9,9 @@ __licence__ = 'GPL v3'
 from abc import ABCMeta, abstractmethod
 from typing import override
 
-from pyschematron.direct_mode.ast import Schema
-from pyschematron.direct_mode.validators.queries.base import QueryProcessor, SimpleQueryProcessor
-from pyschematron.direct_mode.validators.queries.xpath import XPath1QueryParser, XPath2QueryParser, \
+from pyschematron.direct_mode.schematron.ast import Schema
+from pyschematron.direct_mode.xml_validation.queries.base import QueryProcessor, SimpleQueryProcessor
+from pyschematron.direct_mode.xml_validation.queries.xpath import XPath1QueryParser, XPath2QueryParser, \
     XPath3QueryParser, XPath31QueryParser, XPathEvaluationContext
 
 

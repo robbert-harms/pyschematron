@@ -6,10 +6,12 @@ __email__ = 'robbert@altoida.com'
 from abc import ABCMeta, abstractmethod
 from typing import override
 
-from pyschematron.direct_mode.ast import SchematronASTNode, Check, Variable, Paragraph, Extends, ConcreteRule, \
-    ExternalRule, AbstractRule, Query, Rule, ConcretePattern, Pattern, Namespace, Schema, Title, AbstractPattern, \
-    InstancePattern, PatternParameter, Phase, ActivePhase, Diagnostics, Properties
-from pyschematron.direct_mode.parsers.xml.utils import parse_attributes
+from pyschematron.direct_mode.schematron.ast import (SchematronASTNode, Check, Variable, Paragraph, Extends,
+                                                     ConcreteRule, ExternalRule, AbstractRule, Query, Rule,
+                                                     ConcretePattern, Pattern, Namespace, Schema, Title,
+                                                     AbstractPattern, InstancePattern, PatternParameter, Phase,
+                                                     ActivePhase, Diagnostics, Properties, XPathExpression)
+from pyschematron.direct_mode.schematron.parsers.xml.utils import parse_attributes
 
 
 class SchematronASTNodeBuilder(metaclass=ABCMeta):
@@ -61,7 +63,7 @@ class RuleBuilder(SchematronASTNodeBuilder, metaclass=ABCMeta):
         """
         self.paragraphs.extend(nodes)
 
-    def add_extends(self, nodes: Extends):
+    def add_extends(self, nodes: list[Extends]):
         """Add a list of extends nodes.
 
         Args:
@@ -81,7 +83,7 @@ class RuleBuilder(SchematronASTNodeBuilder, metaclass=ABCMeta):
 
         attribute_handlers = {
             'context': lambda k, v: {k: Query(v)},
-            'subject': lambda k, v: {k: Query(v)},
+            'subject': lambda k, v: {k: XPathExpression(v)},
             '{http://www.w3.org/XML/1998/namespace}lang': lambda k, v: {'xml_lang': v},
             '{http://www.w3.org/XML/1998/namespace}space': lambda k, v: {'xml_space': v}
         }

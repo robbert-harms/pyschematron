@@ -11,12 +11,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from lxml.etree import ElementTree
+from lxml.etree import _ElementTree
 
-from elementpath.xpath_context import ItemArgType, DocumentNode
-
-from pyschematron.direct_mode.ast import ConcreteRule, Assert, Report, ConcretePattern, Schema
-from pyschematron.direct_mode.validators.queries.base import EvaluationContext
+from pyschematron.direct_mode.schematron.ast import ConcreteRule, Assert, Report, ConcretePattern, Schema
+from pyschematron.direct_mode.xml_validation.queries.base import EvaluationContext
+from pyschematron.direct_mode.xml_validation.results.xml_nodes import XMLNode
 
 
 @dataclass(slots=True, frozen=True)
@@ -48,10 +47,8 @@ class XMLInformation(ValidationResult):
 
     Args:
         xml_document: the XML document provided as input
-        xml_tree: xpath node wrapping the XML, this is the tree used during validation
     """
-    xml_document: ElementTree
-    xml_tree: DocumentNode
+    xml_document: _ElementTree
 
 
 @dataclass(slots=True, frozen=True)
@@ -73,12 +70,12 @@ class BaseXMLNodeResult(ValidationResult):
     """Base class for the result of processing a specific XML node.
 
     Args:
-        xml_node: the node on which we are reporting the processing result
+        xml_node: the node on which we are reporting the processing result.
         evaluation_context: the context in which the node was processed.
             This should not be specialized to the context in which the node was processed. For example, for a processed
             pattern, this should be the "outside" evaluation context without the parameters inside the pattern.
     """
-    xml_node: ItemArgType
+    xml_node: XMLNode
     evaluation_context: EvaluationContext
 
 
@@ -196,8 +193,10 @@ class FiredRuleResult(RuleResult):
 
     Args:
         check_results: the results of the checks
+        subject_node: the node referenced by the subject attribute of the Schematron rule.
     """
     check_results: list[CheckResult]
+    subject_node: XMLNode | None
 
     def is_skipped(self) -> bool:
         return False
@@ -213,9 +212,76 @@ class FiredRuleResult(RuleResult):
 class CheckResult(BaseXMLNodeResult):
     """The result of checking a Schematron assert or report on an XML node.
 
+    The test result stored in this class represents if the test in the check was true or false. As such,
+    it is independent on the nature of the check. A false test result for an assertion means a failure, which will be
+    reported, while only a true test result for a report is reported. If you want this derived message, use the
+    dynamic check result property.
+
     Args:
         check: the check which was run
-        check_result: if the check passed or not
+        test_result: the result of the test in the check.
+        text: the text result from the rich text content.
+        subject_node: the node referenced by the subject attribute of the Schematron check.
     """
     check: Assert | Report
-    check_result: bool
+    test_result: bool
+    text: str
+    subject_node: XMLNode | None
+    property_results: tuple[PropertyResult, ...] | None = None
+    diagnostic_results: tuple[DiagnosticResult, ...] | None = None
+
+    @property
+    def check_result(self) -> bool:
+        """Get the result of the check.
+
+        This returns a value based the following combinations:
+
+        +--------+-------------+--------------+
+        |  Check | Test result | Return value |
+        +========+=============+==============+
+        | Assert | true        | false        |
+        | Assert | false       | true         |
+        | Report | true        | true         |
+        | Report | false       | false        |
+        +--------+-------------+--------------+
+
+        Returns:
+            If the return value is true, we are either dealing with a failed assert, or a successful report.
+            If the return value is false, we have a successful assert, or a failed report.
+        """
+        if isinstance(self.check, Assert):
+            return not self.test_result
+        else:
+            return self.test_result
+
+
+@dataclass(slots=True, frozen=True)
+class PropertyResult(ValidationResult):
+    """Result of evaluating a property indicated by a check.
+
+    Args:
+        text: resulting text
+        property_id: identifier of this property
+        role: the role attribute for this property, copied from the properties' role attribute
+        scheme: the scheme attribute for this property, copied from the properties' scheme attribute
+    """
+    text: str
+    property_id: str
+    role: str | None = None
+    scheme: str | None = None
+
+
+@dataclass(slots=True, frozen=True)
+class DiagnosticResult(ValidationResult):
+    """Result of evaluating a diagnostic indicated by a check.
+
+    Args:
+        text: resulting text
+        diagnostic_id: identifier of this diagnostic
+        xml_lang: the xml language attribute for this diagnostic
+        xml_space: the xml_space attribute from the diagnostic
+    """
+    text: str
+    diagnostic_id: str
+    xml_lang: str | None = None
+    xml_space: Literal['default', 'preserve'] | None = None

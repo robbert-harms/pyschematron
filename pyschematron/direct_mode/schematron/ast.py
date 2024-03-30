@@ -12,49 +12,25 @@ __maintainer__ = 'Robbert Harms'
 __email__ = 'robbert@xkls.nl'
 __licence__ = 'GPL v3'
 
-from dataclasses import dataclass, fields
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Iterable, Mapping, Any, Self
+from typing import Literal, Self
 
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from pyschematron.direct_mode.lib.ast_visitors import ASTVisitor
+from pyschematron.direct_mode.lib.ast import GenericASTNode
 
 
 @dataclass(slots=True, frozen=True)
-class SchematronASTNode:
+class SchematronASTNode(GenericASTNode):
     """Base class for all Schematron AST nodes.
 
-    In the subclasses we allow the use of lists as datatype, although we aim for immutable objects. Due to this,
-    we implement our own equality and hash functions, transforming all lists into tuples for the sake of comparing and
-    hashing.
+    Since we aim for immutable objects, we do not allow the use of mutable objects in the nodes. Use either
+    tuples (instead of lists) or frozendict instead of dict.
     """
 
     def __post_init__(self):
         for field_name, value in self.get_init_values().items():
             if isinstance(value, list):
                 raise ValueError(f'No lists allowed for field "{field_name}", use a tuple instead.')
-
-    def accept_visitor(self, visitor: ASTVisitor) -> Any:
-        """Accept a visitor on this node.
-
-        Since Python allows polymorphic return values, we allow the visitor pattern to return values.
-
-        Args:
-            visitor: the visitor we accept and call
-
-        Returns:
-            The result of the visitor.
-        """
-        return visitor.visit(self)
-
-    def get_init_values(self) -> dict[str, Any]:
-        """Get the initialisation values with which this class was instantiated.
-
-        Returns:
-            A dictionary with the arguments which instantiated this object.
-        """
-        return {field.name: getattr(self, field.name) for field in fields(self)}
 
     def with_updated(self, **updated_items) -> Self:
         """Get a copy of this AST node with updated init values.
@@ -68,30 +44,6 @@ class SchematronASTNode:
             A new copy of this node with the relevant items updated.
         """
         return type(self)(**(self.get_init_values() | updated_items))
-
-    def get_children(self) -> list[SchematronASTNode]:
-        """Get a list of all the AST nodes in this node.
-
-        This should return all the references to AST nodes in this node, all bundled in one list.
-
-        Returns:
-            All the child nodes in this node
-        """
-        def get_ast_nodes(input):
-            children = []
-
-            if isinstance(input, SchematronASTNode):
-                children.append(input)
-            elif isinstance(input, Mapping):
-                for el in input.values():
-                    children.extend(get_ast_nodes(el))
-            elif isinstance(input, Iterable) and not isinstance(input, str):
-                for el in input:
-                    children.extend(get_ast_nodes(el))
-
-            return children
-
-        return get_ast_nodes(self.get_init_values())
 
 
 @dataclass(slots=True, frozen=True)
@@ -367,7 +319,7 @@ class Rule(SchematronASTNode):
     icon: str | None = None
     role: str | None = None
     see: str | None = None
-    subject: Query | None = None
+    subject: XPathExpression | None = None
     xml_lang: str | None = None
     xml_space: Literal['default', 'preserve'] | None = None
 
@@ -443,7 +395,7 @@ class Check(SchematronASTNode):
         properties: listing of identifiers of property items
         role: a description of the error message or the rule
         see: a URI or URL referencing background information
-        subject: a query referencing the node to which we assign an error message
+        subject: an XPath expression referencing the node to which we assign an error message
         xml_lang: the default natural language for this node
         xml_space: defines how whitespace must be handled for this element.
     """
@@ -457,7 +409,7 @@ class Check(SchematronASTNode):
     properties: tuple[str, ...] | None = None
     role: str | None = None
     see: str | None = None
-    subject: Query | None = None
+    subject: XPathExpression | None = None
     xml_lang: str | None = None
     xml_space: Literal['default', 'preserve'] | None = None
 
@@ -544,7 +496,7 @@ class Title(SchematronASTNode):
 
 @dataclass(slots=True, frozen=True)
 class Query(SchematronASTNode):
-    """Representation of a Query used in the Schematron AST nodes"""
+    """Representation of a Query used in the Schematron AST nodes."""
     query: str
 
 

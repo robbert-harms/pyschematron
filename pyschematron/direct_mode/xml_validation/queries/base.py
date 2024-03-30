@@ -180,6 +180,22 @@ class EvaluationContext(metaclass=ABCMeta):
             A new evaluation context
         """
 
+    @abstractmethod
+    def get_xml_root(self) -> RootArgType | None:
+        """Get the XML root node current in this context.
+
+        Returns:
+            The current root node. May not be set, giving None.
+        """
+
+    @abstractmethod
+    def get_context_item(self) -> ItemArgType | None:
+        """Get the XML node serving as the query base.
+
+        Returns:
+            The XML item we use as context node for parser evaluation. May not be set yet.
+        """
+
 
 class Query(metaclass=ABCMeta):
     """Representation of an executable Schematron query.

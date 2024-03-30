@@ -3,51 +3,21 @@ __date__ = '2023-03-06'
 __maintainer__ = 'Robbert Harms'
 __email__ = 'robbert@altoida.com'
 
-from typing import Any, Mapping, Iterable, Literal, Type, override
+from typing import Any, Mapping, Iterable, Literal, override
 
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
 
-from pyschematron.direct_mode.ast import SchematronASTNode, Schema, ConcretePattern, Rule, ExtendsExternal, \
+from pyschematron.direct_mode.lib.ast import GenericASTVisitor
+from pyschematron.direct_mode.schematron.ast import SchematronASTNode, Schema, ConcretePattern, Rule, ExtendsExternal, \
     ExternalRule, ConcreteRule, ExtendsById, AbstractRule, AbstractPattern, InstancePattern, Pattern, Phase
-from pyschematron.direct_mode.lib.utils import macro_expand
+from pyschematron.direct_mode.schematron.utils import macro_expand
 
 
-class ASTVisitor(metaclass=ABCMeta):
-    """Classes of this type represent visitors according to the visitor pattern.
-
-    Instead of a typed double dispatch we use dynamic double dispatching in which each node, when visited, calls
-    the :meth:``visit` of this class instead of a visit method for each node type. This makes it easier to
-    do edits on class names since the types can be looked up by an IDE.
-    """
-
-    @abstractmethod
-    def visit(self, ast_node: SchematronASTNode) -> Any:
-        """Visit the AST node.
-
-        This uses dynamic dispatch to accept all types of Schematron AST nodes.
-
-        Since Python allows polymorphic return values, we allow the visitor pattern to return values.
-
-        Args:
-            ast_node: an AST node of any type
-
-        Returns:
-            The result of the visitor.
-        """
-
-    def apply(self, ast_node: SchematronASTNode) -> Any:
-        """Convenience method to apply this visitor on the indicated node and get the result value.
-
-        Args:
-            ast_node: the node on which to apply this visitor
-
-        Returns:
-            The result value from :meth:`get_result`
-        """
-        return ast_node.accept_visitor(self)
+class SchematronASTVisitor(GenericASTVisitor[SchematronASTNode], metaclass=ABCMeta):
+    """Visitor pattern for the Schematron AST nodes."""
 
 
-class FindIdVisitor(ASTVisitor):
+class FindIdVisitor(SchematronASTVisitor):
 
     def __init__(self, id_ref: str):
         """A visitor which finds a node with the given ID.
@@ -68,7 +38,7 @@ class FindIdVisitor(ASTVisitor):
                 return found_node
 
 
-class GetIDMappingVisitor(ASTVisitor):
+class GetIDMappingVisitor(SchematronASTVisitor):
 
     def __init__(self):
         """A visitor which maps all nodes with an id to their id."""
@@ -90,9 +60,9 @@ class GetIDMappingVisitor(ASTVisitor):
         return {}
 
 
-class GetNodesOfTypeVisitor(ASTVisitor):
+class GetNodesOfTypeVisitor(SchematronASTVisitor):
 
-    def __init__(self, types: Type[SchematronASTNode] | tuple[Type[SchematronASTNode], ...]):
+    def __init__(self, types: type[SchematronASTNode] | tuple[type[SchematronASTNode], ...]):
         """A visitor which checks each node for their type against the type(s) provided
 
         Args:
@@ -113,7 +83,7 @@ class GetNodesOfTypeVisitor(ASTVisitor):
         return self._result
 
 
-class ResolveExtendsVisitor(ASTVisitor):
+class ResolveExtendsVisitor(SchematronASTVisitor):
 
     def __init__(self, schema: Schema):
         """Simplify an AST Schema by inlining all the extends in the rules.
@@ -219,7 +189,7 @@ class ResolveExtendsVisitor(ASTVisitor):
         return ResolveExtendsVisitor(self._schema).apply(extends.rule)
 
 
-class ResolveAbstractPatternsVisitor(ASTVisitor):
+class ResolveAbstractPatternsVisitor(SchematronASTVisitor):
 
     def __init__(self, schema: Schema):
         """Simplify an AST Schema by expanding all the instance-of patterns.
@@ -280,7 +250,7 @@ class ResolveAbstractPatternsVisitor(ASTVisitor):
         return macro_expanded_pattern.with_updated(id=instance_pattern.id)
 
 
-class MacroExpandVisitor(ASTVisitor):
+class MacroExpandVisitor(SchematronASTVisitor):
 
     def __init__(self, macro_expansions: dict[str, str]):
         """Macro expand an abstract pattern.
@@ -302,7 +272,7 @@ class MacroExpandVisitor(ASTVisitor):
 
         return self._visit_generic_node(ast_node)
 
-    def _visit_generic_node(self, ast_node: SchematronASTNode) -> SchematronASTNode:
+    def _visit_generic_node[T: SchematronASTNode](self, ast_node: T) -> T:
         """Visit a generic node and do macro expansion.
 
         Args:
@@ -333,7 +303,7 @@ class MacroExpandVisitor(ASTVisitor):
         return ast_node.with_updated(**updated_items)
 
 
-class PhaseSelectionVisitor(ASTVisitor):
+class PhaseSelectionVisitor(SchematronASTVisitor):
 
     def __init__(self, schema: Schema, phase: str | Literal['#ALL', '#DEFAULT'] | None = None):
         """Reduce an AST to only those patterns and phases referenced by a specific phase.

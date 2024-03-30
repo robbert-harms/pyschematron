@@ -10,63 +10,17 @@ __maintainer__ = 'Robbert Harms'
 __email__ = 'robbert@xkls.nl'
 __licence__ = 'LGPL v3'
 
-from dataclasses import dataclass, fields
-from typing import Literal, Any, TYPE_CHECKING, Mapping, Iterable
+from dataclasses import dataclass
+from typing import Literal
 
-from lxml.etree import Element, _Element
+from lxml.etree import _Element
 
-if TYPE_CHECKING:
-    from pyschematron.direct_mode.svrl.svrl_visitors import SVRLASTVisitor
+from pyschematron.direct_mode.lib.ast import GenericASTNode
 
 
 @dataclass(slots=True, frozen=True)
-class SVRLNode:
-    """Base class for the SVRL nodes."""
-
-    def accept_visitor(self, visitor: SVRLASTVisitor) -> Any:
-        """Accept a visitor on this node.
-
-        Since Python allows polymorphic return values, we allow the visitor pattern to return values.
-
-        Args:
-            visitor: the visitor we accept and call
-
-        Returns:
-            The result of the visitor.
-        """
-        return visitor.visit(self)
-
-    def get_init_values(self) -> dict[str, Any]:
-        """Get the initialisation values with which this class was instantiated.
-
-        Returns:
-            A dictionary with the arguments which instantiated this object.
-        """
-        return {field.name: getattr(self, field.name) for field in fields(self)}
-
-    def get_children(self) -> list[SVRLNode]:
-        """Get a list of all the SVRL AST nodes in this node.
-
-        This should return all the references to AST nodes in this node, all bundled in one list.
-
-        Returns:
-            All the child nodes in this node
-        """
-        def get_ast_nodes(input):
-            children = []
-
-            if isinstance(input, SVRLNode):
-                children.append(input)
-            elif isinstance(input, Mapping):
-                for el in input.values():
-                    children.extend(get_ast_nodes(el))
-            elif isinstance(input, Iterable) and not isinstance(input, str):
-                for el in input:
-                    children.extend(get_ast_nodes(el))
-
-            return children
-
-        return get_ast_nodes(self.get_init_values())
+class SVRLNode(GenericASTNode):
+    """Base class for the Schematron Validation Report Language (SVRL) nodes."""
 
 
 @dataclass(slots=True, frozen=True)
@@ -198,6 +152,9 @@ class CheckResult(ValidationEvent):
         text: result description of this check.
         location: the location of this failed assert as an XPath expression
         test: the test expression for this assert, copied from the Schematron assert node.
+        diagnostic_references: listing of the diagnostic references by this check
+        property_references: properties referenced by this check
+        subject_location: the location referenced by the subject of either the check or the parent rule.
         flag: a flag that was set to true when this assertion fired, typically a copy of the Schematron's flag rule.
         id: the identifier of this rule, typically a copy of the Schematron assert id.
         role: the role for this assert, typically a copy of the role of the assert element.
@@ -207,6 +164,7 @@ class CheckResult(ValidationEvent):
     test: SchematronQuery
     diagnostic_references: tuple[DiagnosticReference, ...] = tuple()
     property_references: tuple[PropertyReference, ...] = tuple()
+    subject_location: XPathExpression | None = None
     flag: str | None = None
     id: str | None = None
     role: str | None = None

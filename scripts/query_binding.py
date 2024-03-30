@@ -10,8 +10,8 @@ import elementpath
 import lxml.etree as etree
 from elementpath.xpath3 import XPath3Parser
 
-from pyschematron.direct_mode.validators.queries.factories import SimpleQueryProcessorFactory
-from pyschematron.direct_mode.validators.queries.xpath import XPathQueryParser, XPath2QueryParser, \
+from pyschematron.direct_mode.xml_validation.queries.factories import SimpleQueryProcessorFactory
+from pyschematron.direct_mode.xml_validation.queries.xpath import XPathQueryParser, XPath2QueryParser, \
     XPathEvaluationContext, SimpleCustomXPathFunction
 
 xml = etree.fromstring('''
@@ -19,6 +19,7 @@ xml = etree.fromstring('''
     <head id="test"></head>
     <body>
         <p>Test</p>
+        <p>Test2</p>
     </body>
 </html>
 ''')
@@ -48,6 +49,8 @@ print(query.evaluate(sub_context))
 query = parser.parse('@id')
 sub_context = evaluation_context.with_xml_root(parser.parse('/html/body').evaluate(evaluation_context)[0])
 print(query.evaluate(sub_context))
+
+query = parser.parse()
 
 # context.add_variables({'max-weight': 'xs:integer(1000)')
 

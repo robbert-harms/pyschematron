@@ -4,7 +4,7 @@ PySchematron
 This is a library for Schematron validation in Python.
 
 Schematron is a formal schema language used to validate XML documents.
-A Schematron schema is defined as an XML containing various assertions used to validate an XML document.
+A Schematron schema is defined as an XML containing various assertions to validate an XML document.
 If the XML you wish to validate passes all the Schematron assertions,
 your XML is considered valid according to the Schematron schema.
 
@@ -14,7 +14,7 @@ This library only supports the latest version of Schematron,
 
 Currently, this library only supports a pure Python mode of Schematron validation.
 In this pure Python mode we load the Schematron into an internal representation and apply that to an XML.
-The advantage of direct evaluation is that it offers superior performance compared to an XSLT
+The advantage of this kind of direct evaluation is that it offers superior performance compared to an XSLT
 transformation based evaluation.
 The disadvantage is that it only supports XPath expressions and does not support XSLT functions.
 
@@ -27,7 +27,7 @@ A few similar packages to this software in other languages are
 `ph-schematron <http://phax.github.io/ph-schematron/>`_ in Java.
 
 For all XPath expressions this package uses the
-`elementpath <https://github.com/sissaschool/elementpath>`_ library supporting XPath 1.0, 2.0 and 3.0 selectors.
+`elementpath <https://github.com/sissaschool/elementpath>`_ library supporting XPath 1.0, 2.0, 3.0 and 3.1 selectors.
 
 **********
 Python API
@@ -71,8 +71,8 @@ When applied to a document, the direct mode evaluation follows this procedure to
    In this phase we process the AST to create a concrete set of patterns and rules.
    All `<extends />` are resolved, abstract patterns are instantiated,
    and redundant abstract rules and patterns are removed.
-#. Limit the AST to only include patterns and phases limited to the selected phase.
-#. Determine the query binding language to use.
+#. Phase selection, we limit the AST to only include patterns and phases limited to the selected phase.
+#. Query binding, we determine the query binding language to use.
    This library only supports `xslt`, `xslt2`, `xslt3`, `xpath`, `xpath2`, `xpath3`, and `xpath31`,
    where all `xslt` variations are limited to XPath expressions only.
 #. Apply the bound schema to an XML document to validate.
@@ -80,10 +80,7 @@ When applied to a document, the direct mode evaluation follows this procedure to
 
 Custom functions
 ----------------
-In direct mode evaluation, custom XSLT functions in your Schematron (`<xsl:function>`) are not supported.
-
-Custom Python functions are supported when using the `xslt2`, `xslt3`, `xpath2`, `xpath3`, or `xpath31` query binding languages.
-This uses the external function support in the `elementpath` library.
+In the current direct mode evaluation, custom XSLT functions in your Schematron (`<xsl:function>`) are not supported.
 
 
 Compliance
@@ -103,4 +100,6 @@ Note that the ISO Schematron applies rules to:
 - Processing instructions (processing-instruction())
 
 But it does not apply rules to text nodes.
+
+If there are any problems, please open a Github issue.
 
