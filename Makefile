@@ -18,6 +18,8 @@ help:
 	@echo "docs-man: generate the linux manpages"
 	@echo "docs-changelog: generate the changelog documentation"
 	@echo "install-deps: install all the dependencies"
+	@echo "install-symlink: install the package as a symlink, to allow continuous development"
+	@echo "uninstall: uninstall PySchematron (while keeping the dependencies)"
 	@echo "prepare-release: prepare for a new release"
 	@echo "release: package and release the new version"
 
@@ -146,3 +148,15 @@ dist: clean
 	$(PYTHON) setup.py sdist
 	$(PYTHON) setup.py bdist_wheel
 	ls -l dist
+
+.PHONY: install-deps
+install-deps:
+	flit install --only-deps
+
+.PHONY: install-symlink
+install-symlink:
+	flit install --symlink
+
+.PHONY: uninstall
+uninstall:
+	pip uninstall $(PROJECT_NAME)

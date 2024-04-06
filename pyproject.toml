@@ -6,7 +6,7 @@ version = "0.1.2"
 requires-python = ">=3.12"
 keywords = ["Schematron", "XML validation"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "Natural Language :: English",
@@ -41,7 +41,7 @@ doc = [
 ]
 
 [project.scripts]
-adf-validator = "pyschematron.cli:app"
+pyschematron = "pyschematron.cli:app"
 
 [build-system]
 requires = ["flit_core >=3.9,<4"]

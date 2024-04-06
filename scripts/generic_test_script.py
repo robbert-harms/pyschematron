@@ -1,3 +1,5 @@
+"""A test script I use when developing PySchematron."""
+
 __author__ = 'Robbert Harms'
 __date__ = '2023-02-21'
 __maintainer__ = 'Robbert Harms'
@@ -45,3 +47,4 @@ with open('/tmp/report_pyschematron.xml', 'w') as f:
 
 print(report_str)
 
+print()

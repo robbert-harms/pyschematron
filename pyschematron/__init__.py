@@ -16,7 +16,7 @@ from pyschematron.direct_mode.xml_validation.queries.base import CustomQueryFunc
 
 def validate_document(xml_document: Path | _ElementTree,
                       schematron_schema: Path | _ElementTree,
-                      schematron_phase: str | None = None,
+                      phase: str | None = None,
                       custom_functions: dict[str, str | list[CustomQueryFunction]] | None = None,
                       mode: Literal['direct-mode'] = 'direct-mode') -> ValidationResult:
     """Validate an XML document using a Schematron schema.
@@ -24,7 +24,7 @@ def validate_document(xml_document: Path | _ElementTree,
     Args:
         xml_document: the XML document we would like to validate
         schematron_schema: the Schematron Schema we would like to load and use for the validation
-        schematron_phase: the Schematron phase we would like to use, optional.
+        phase: the Schematron phase we would like to use, optional.
         custom_functions: a dictionary defining additional custom functions to add to the parser(s).
             This should at least contain the key 'query_binding' mapping to a query binding name, and the
             key 'custom_query_functions' specifying a list of custom query functions to add.
@@ -36,15 +36,16 @@ def validate_document(xml_document: Path | _ElementTree,
     Returns:
         The validation result in an API wrapper.
     """
-    validator_factory = DirectModeSchematronValidatorFactory(schematron_xml=schematron_schema, phase=schematron_phase)
-    validator_factory.add_custom_functions(**custom_functions)
+    validator_factory = DirectModeSchematronValidatorFactory(schematron_xml=schematron_schema, phase=phase)
+    if custom_functions:
+        validator_factory.add_custom_functions(**custom_functions)
     validator = validator_factory.build()
     return validator.validate(xml_document)
 
 
 def validate_documents(xml_documents: list[Path | _ElementTree],
                        schematron_schema: Path | _ElementTree,
-                       schematron_phase: str | None = None,
+                       phase: str | None = None,
                        custom_functions: dict[str, str | list[CustomQueryFunction]] | None = None,
                        mode: Literal['direct-mode'] = 'direct-mode') -> list[ValidationResult]:
     """Validate multiple XML documents using the same Schematron schema.
@@ -55,7 +56,7 @@ def validate_documents(xml_documents: list[Path | _ElementTree],
     Args:
         xml_documents: the XML documents we would like to validate
         schematron_schema: the Schematron Schema we would like to load and use for the validation
-        schematron_phase: the Schematron phase we would like to use, optional.
+        phase: the Schematron phase we would like to use, optional.
         custom_functions: a dictionary defining additional custom functions to add to the parser(s).
             This should at least contain the key 'query_binding' mapping to a query binding name, and the
             key 'custom_query_functions' specifying a list of custom query functions to add.
@@ -67,8 +68,9 @@ def validate_documents(xml_documents: list[Path | _ElementTree],
     Returns:
         The validation results in an API wrapper.
     """
-    validator_factory = DirectModeSchematronValidatorFactory(schematron_xml=schematron_schema, phase=schematron_phase)
-    validator_factory.add_custom_functions(**custom_functions)
+    validator_factory = DirectModeSchematronValidatorFactory(schematron_xml=schematron_schema, phase=phase)
+    if custom_functions:
+        validator_factory.add_custom_functions(**custom_functions)
     validator = validator_factory.build()
 
     validation_results = []

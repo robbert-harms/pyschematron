@@ -34,7 +34,7 @@ For all XPath expressions this package uses the
 **********
 Python API
 **********
-To use the Python API, install the project like any other Python project, e.g. using `pip install pyschematron`.
+To use the Python API, install the project like any other Python project, e.g. using ``pip install pyschematron``.
 
 After that you can use:
 
@@ -60,12 +60,16 @@ To process multiple documents with the same Schematron schema, you can use:
     results = validate_documents(documents, schema)
 
 
+For more examples, or examples on how to use different parts of the API, please see the `demo_*` files in the
+`scripts` directory.
+
+
 **********************
 Command Line Interface
 **********************
-
-todo
-...
+To use the command line interface, first install the application using pip: ``pip install pyschematron``.
+Afterwards, you can use the command ``pyschematron`` to validate your documents.
+Use ``pyschematron --help`` to see the command line options.
 
 
 *************
@@ -81,22 +85,22 @@ When applied to a document, the direct mode evaluation follows this procedure to
 
 #. Read in the Schematron from either a document or a string.
    In this phase the document is loaded into an AST (abstract syntax tree).
-   All `<includes />` are resolved and inlined into the AST.
-   All `<extends />` are loaded but not fully resolved at this stage.
+   All ``<includes />`` are resolved and inlined into the AST.
+   All ``<extends />`` are loaded but not fully resolved at this stage.
 #. Recreate the AST without abstract patterns and rules.
    In this phase we process the AST to create a concrete set of patterns and rules.
-   All `<extends />` are resolved, abstract patterns are instantiated,
+   All ``<extends />`` are resolved, abstract patterns are instantiated,
    and redundant abstract rules and patterns are removed.
 #. Phase selection, we limit the AST to only include patterns and phases limited to the selected phase.
 #. Query binding, we determine the query binding language to use.
-   This library only supports `xslt`, `xslt2`, `xslt3`, `xpath`, `xpath2`, `xpath3`, and `xpath31`,
-   where all `xslt` variations are limited to XPath expressions only.
+   This library only supports ``xslt``, ``xslt2``, ``xslt3``, ``xpath``, ``xpath2``, ``xpath3``, and ``xpath31``,
+   where all ``xslt`` variations are limited to XPath expressions only.
 #. Apply the bound schema to an XML document to validate.
 
 
 Custom functions
 ----------------
-In the current direct mode evaluation, custom XSLT functions in your Schematron (`<xsl:function>`) are not supported.
+With the current direct mode evaluation method, custom XSLT functions in your Schematron (``<xsl:function>``) are not supported.
 Custom Python functions are supported however. View the `demo_custom_functions.py` in the `scripts` directory for examples.
 
 
@@ -105,8 +109,8 @@ Compliance
 The direct mode evaluation supports most of the `ISO/IEC 19757-3:2020 <https://www.iso.org/standard/74515.html>`_ standard, with a few exceptions.
 All Schematron specific elements are supported, except for XSLT elements.
 
-In terms of attributes, the `@documents` attribute of the `<assert />` tag is not supported.
-Furthermore, `@icon`, `@see`, `@fpi`, `@flag`, and `@role` are loaded but not used.
+In terms of attributes, the ``@documents`` attribute of the ``<assert />`` tag is not supported.
+Furthermore, ``@icon``, ``@see``, ``@fpi``, ``@flag``, and ``@role`` are loaded but not used.
 
 Note that the ISO Schematron applies rules to:
 
