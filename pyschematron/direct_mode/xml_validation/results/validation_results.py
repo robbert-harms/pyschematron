@@ -38,6 +38,19 @@ class XMLDocumentValidationResult(ValidationResult):
     schema_information: SchemaInformation
     node_results: tuple[FullNodeResult, ...]
 
+    def is_valid(self) -> bool:
+        """Return True if the XML document was considered valid, False otherwise.
+
+        An XML document is considered valid if the Schematron had no assertions raised, and all reports were successful.
+
+        Returns:
+            True if the document passed the Schematron validation, False otherwise.
+        """
+        for node_result in self.node_results:
+            if not node_result.is_valid():
+                return False
+        return True
+
 
 @dataclass(slots=True, frozen=True)
 class XMLInformation(ValidationResult):
@@ -90,6 +103,17 @@ class FullNodeResult(BaseXMLNodeResult):
     """
     pattern_results: tuple[PatternResult, ...]
 
+    def is_valid(self) -> bool:
+        """Return True if all patterns yielded a valid results, False otherwise.
+
+        Returns:
+            True if the document passed the Schematron validation, False otherwise.
+        """
+        for pattern_result in self.pattern_results:
+            if not pattern_result.is_valid():
+                return False
+        return True
+
 
 @dataclass(slots=True, frozen=True)
 class PatternResult(BaseXMLNodeResult):
@@ -109,6 +133,18 @@ class PatternResult(BaseXMLNodeResult):
             True if there was an active rule in this pattern for the node, False otherwise
         """
         return any(result.is_fired() for result in self.rule_results)
+
+    def is_valid(self) -> bool:
+        """Return True if all rules yielded a valid results, False otherwise.
+
+        Returns:
+            True if the document passed the Schematron validation, False otherwise.
+        """
+        for rule_result in self.rule_results:
+            if isinstance(rule_result, FiredRuleResult):
+                if not rule_result.is_valid():
+                    return False
+        return True
 
 
 @dataclass(slots=True, frozen=True)
@@ -207,6 +243,17 @@ class FiredRuleResult(RuleResult):
     def is_suppressed(self) -> bool:
         return False
 
+    def is_valid(self) -> bool:
+        """Return True if all checks yielded a valid results, False otherwise.
+
+        Returns:
+            True if the document passed the Schematron validation, False otherwise.
+        """
+        for check_result in self.check_results:
+            if not check_result.check_result:
+                return False
+        return True
+
 
 @dataclass(slots=True, frozen=True)
 class CheckResult(BaseXMLNodeResult):
@@ -234,7 +281,7 @@ class CheckResult(BaseXMLNodeResult):
     def check_result(self) -> bool:
         """Get the result of the check.
 
-        This returns a value based the following combinations:
+        This checks if the result was a pass or not, it returns a value based on the following combinations:
 
         +--------+-------------+--------------+
         |  Check | Test result | Return value |

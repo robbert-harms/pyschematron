@@ -9,10 +9,10 @@ from pathlib import Path
 from typing import BinaryIO, Union
 
 from lxml import etree
-from lxml.etree import ElementTree
+from lxml.etree import _ElementTree
 
 
-def load_xml_document(xml_data: Union[bytes, str, Path, IOBase, BinaryIO]) -> ElementTree:
+def load_xml_document(xml_data: Union[bytes, str, Path, IOBase, BinaryIO]) -> _ElementTree:
     """Load an XML document from a polymorphic source.
 
     Args:

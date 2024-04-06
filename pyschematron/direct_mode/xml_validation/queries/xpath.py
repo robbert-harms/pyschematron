@@ -13,8 +13,8 @@ __maintainer__ = 'Robbert Harms'
 __email__ = 'robbert@xkls.nl'
 __licence__ = 'GPL v3'
 
-from typing import Any, Callable, Type, Self, override
-from abc import abstractmethod, ABCMeta
+from typing import Any, Type, Self, override
+from abc import ABCMeta
 
 from elementpath import XPathToken, XPath1Parser, XPath2Parser, XPathContext
 from elementpath.xpath3 import XPath3Parser
@@ -22,22 +22,28 @@ from elementpath.xpath31 import XPath31Parser
 from elementpath.xpath_context import ItemArgType
 from elementpath.tree_builders import RootArgType
 
-from pyschematron.direct_mode.xml_validation.queries.base import QueryParser, Query, EvaluationContext
+from pyschematron.direct_mode.xml_validation.queries.base import QueryParser, Query, EvaluationContext, \
+    SimpleQueryProcessor, CustomQueryFunction, SimpleCustomQueryFunction
 from pyschematron.direct_mode.xml_validation.queries.exceptions import MissingRootNodeError
 
 
-class XPathQueryParser(QueryParser, metaclass=ABCMeta):
+class XPathQueryProcessor(SimpleQueryProcessor):
 
-    @abstractmethod
-    def with_custom_function(self, custom_function: CustomXPathFunction) -> Self:
-        """Create a copy of this XPath query parser with an additional custom function.
+    def __init__(self, query_parser: XPathQueryParser, evaluation_context: EvaluationContext = None):
+        """Query processor for XPath queries.
+
+        This is simply a wrapper around the simple query processor, with as default evaluation context the XPath
+        evaluation context.
 
         Args:
-            custom_function: the custom function to add to the parser.
-
-        Returns:
-            An updated XPath Query Parser
+            query_parser: the (XPath) query processor to use
+            evaluation_context: the evaluation context, defaults to the XPath evaluation context
         """
+        super().__init__(query_parser, evaluation_context or XPathEvaluationContext())
+
+
+class XPathQueryParser(QueryParser, metaclass=ABCMeta):
+    """Wrapper around the query parser to indicate specialization for XPath query parsers."""
 
 
 class ElementPathXPathQueryParser(XPathQueryParser, metaclass=ABCMeta):
@@ -56,15 +62,15 @@ class ElementPathXPathQueryParser(XPathQueryParser, metaclass=ABCMeta):
         self._parser_type = parser_type
         self._namespaces = namespaces or {}
         self._custom_functions = custom_functions or []
-        self._parser = self._get_updated_parser()
+        self._parser = self._get_elementpath_parser()
 
     @override
     def parse(self, source: str) -> Query:
         xpath_token = self._parser.parse(source)
         return XPathQuery(xpath_token)
 
-    def _get_updated_parser(self) -> XPath1Parser | XPath2Parser | XPath3Parser | XPath31Parser:
-        """Get an updated parser using the defined namespaces and custom functions.
+    def _get_elementpath_parser(self) -> XPath1Parser | XPath2Parser | XPath3Parser | XPath31Parser:
+        """Get an elementpath parser using the defined namespaces and custom functions.
 
         Returns:
             An elementpath parser instance to use during parsing.
@@ -75,62 +81,12 @@ class ElementPathXPathQueryParser(XPathQueryParser, metaclass=ABCMeta):
         return parser
 
 
-class CustomXPathFunction(metaclass=ABCMeta):
-
-    @property
-    @abstractmethod
-    def callback(self) -> Callable[..., Any]:
-        """Get the callback of this custom XPath function.
-
-        Returns:
-            The (Python) callback function.
-        """
-
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """The name of this function.
-
-        Returns:
-            The name of the XPath callable function.
-        """
-
-    @property
-    @abstractmethod
-    def prefix(self) -> str | None:
-        """The XPath prefix of this function.
-
-        Returns:
-            The prefix of this function
-        """
+class CustomXPathFunction(CustomQueryFunction, metaclass=ABCMeta):
+    """Wrapper around the custom query functions to specify functions for use in XPath query parsers."""
 
 
-class SimpleCustomXPathFunction(CustomXPathFunction):
-
-    def __init__(self, callback: Callable[..., Any], name: str, prefix: str | None = None):
-        """Simple definition of an XPath custom function.
-
-        Args:
-            callback: the function to call when evaluating the parsed expression
-            name: the XPath function name
-            prefix: the function's name prefix, if not provided it is set to the XPath default
-                function namespace (`fn:`). This means, it may overwrite library functions.
-        """
-        self._callback = callback
-        self._name = name
-        self._prefix = prefix
-
-    @property
-    def callback(self) -> Callable[..., Any]:
-        return self._callback
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    @property
-    def prefix(self) -> str | None:
-        return self._prefix
+class SimpleCustomXPathFunction(CustomXPathFunction, SimpleCustomQueryFunction):
+    """Simple definition of an XPath custom function."""
 
 
 class XPathEvaluationContext(EvaluationContext):
@@ -263,7 +219,8 @@ class XPath2QueryParser(ElementPathXPathQueryParser):
 
     @override
     def with_namespaces(self, namespaces: dict[str, str]) -> Self:
-        return type(self)(self._namespaces | namespaces)
+        return type(self)(self._namespaces | namespaces,
+                          custom_functions=self._custom_functions)
 
     @override
     def with_custom_function(self, custom_function: CustomXPathFunction) -> Self:
@@ -288,7 +245,8 @@ class XPath3QueryParser(ElementPathXPathQueryParser):
 
     @override
     def with_namespaces(self, namespaces: dict[str, str]) -> Self:
-        return type(self)(self._namespaces | namespaces)
+        return type(self)(self._namespaces | namespaces,
+                          custom_functions=self._custom_functions)
 
     @override
     def with_custom_function(self, custom_function: CustomXPathFunction) -> Self:
@@ -313,7 +271,8 @@ class XPath31QueryParser(ElementPathXPathQueryParser):
 
     @override
     def with_namespaces(self, namespaces: dict[str, str]) -> Self:
-        return type(self)(self._namespaces | namespaces)
+        return type(self)(self._namespaces | namespaces,
+                          custom_functions=self._custom_functions)
 
     @override
     def with_custom_function(self, custom_function: CustomXPathFunction) -> Self:

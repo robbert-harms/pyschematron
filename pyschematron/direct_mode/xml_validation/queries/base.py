@@ -7,7 +7,7 @@ __email__ = 'robbert@xkls.nl'
 __licence__ = 'GPL v3'
 
 from abc import ABCMeta, abstractmethod
-from typing import Any, Self, override
+from typing import Any, Self, override, Callable
 from elementpath.tree_builders import RootArgType
 from elementpath.xpath_context import ItemArgType
 
@@ -46,11 +46,24 @@ class QueryProcessor(metaclass=ABCMeta):
             An updated Query Processor.
         """
 
+    @abstractmethod
+    def with_custom_function(self, custom_function: CustomQueryFunction) -> Self:
+        """Create a copy of this query processor with support for the provided custom function.
+
+        Args:
+            custom_function: the custom function to add to the parser.
+
+        Returns:
+            An updated query processor
+        """
+
 
 class SimpleQueryProcessor(QueryProcessor):
 
     def __init__(self, query_parser: QueryParser, evaluation_context: EvaluationContext):
         """Simple query processor prepared with a query parser and evaluation context.
+
+        Defined to be immutable.
 
         Args:
             query_parser: the query parser this instance specialize in
@@ -71,6 +84,11 @@ class SimpleQueryProcessor(QueryProcessor):
     def with_namespaces(self, namespaces: dict[str, str]) -> Self:
         return type(self)(self._query_parser.with_namespaces(namespaces),
                           self._evaluation_context.with_namespaces(namespaces))
+
+    @override
+    def with_custom_function(self, custom_function: CustomQueryFunction) -> Self:
+        return type(self)(self._query_parser.with_custom_function(custom_function),
+                          self._evaluation_context)
 
 
 class QueryParser(metaclass=ABCMeta):
@@ -98,6 +116,17 @@ class QueryParser(metaclass=ABCMeta):
             An updated Query Parser.
         """
 
+    @abstractmethod
+    def with_custom_function(self, custom_function: CustomQueryFunction) -> Self:
+        """Create a copy of this query parser with an additional custom query function.
+
+        Args:
+            custom_function: the custom function to add to the parser.
+
+        Returns:
+            An updated Query Parser.
+        """
+
 
 class CachingQueryParser(QueryParser):
 
@@ -118,7 +147,69 @@ class CachingQueryParser(QueryParser):
 
     @override
     def with_namespaces(self, namespaces: dict[str, str]) -> Self:
-        return CachingQueryParser(self._query_parser.with_namespaces(namespaces))
+        return type(self)(self._query_parser.with_namespaces(namespaces))
+
+    @override
+    def with_custom_function(self, custom_function: CustomQueryFunction) -> Self:
+        return type(self)(self._query_parser.with_custom_function(custom_function))
+
+
+class CustomQueryFunction(metaclass=ABCMeta):
+
+    @property
+    @abstractmethod
+    def callback(self) -> Callable[..., Any]:
+        """Get the callback of this custom function.
+
+        Returns:
+            The (Python) callback function.
+        """
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """The name of this function.
+
+        Returns:
+            The name of the callable function.
+        """
+
+    @property
+    @abstractmethod
+    def prefix(self) -> str | None:
+        """The XML prefix of this function.
+
+        Returns:
+            The XML prefix of this function
+        """
+
+
+class SimpleCustomQueryFunction(CustomQueryFunction):
+
+    def __init__(self, callback: Callable[..., Any], name: str, prefix: str | None = None):
+        """Simple definition of a custom query function.
+
+        Args:
+            callback: the function to call when evaluating the parsed expression
+            name: the function name for use inside the query language.
+            prefix: the function's name prefix, if not provided it is set to the XPath default
+                function namespace (`fn:`). This means, it may overwrite library functions.
+        """
+        self._callback = callback
+        self._name = name
+        self._prefix = prefix
+
+    @property
+    def callback(self) -> Callable[..., Any]:
+        return self._callback
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def prefix(self) -> str | None:
+        return self._prefix
 
 
 class EvaluationContext(metaclass=ABCMeta):

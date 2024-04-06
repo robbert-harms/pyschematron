@@ -20,7 +20,7 @@ java -jar ~/programming/java/schxslt-cli.jar -d cargo.xml -s schema.sch -o /tmp/
 '''
 
 example_path = Path('../tests/fixtures/full_example/')
-schematron_path = Path(example_path / 'schema.sch')
+schematron_path = example_path / 'schema.sch'
 phase = '#ALL'
 
 schematron_xml = load_xml_document(schematron_path)

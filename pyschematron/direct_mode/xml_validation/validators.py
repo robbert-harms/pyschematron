@@ -23,7 +23,7 @@ from pyschematron.direct_mode.schematron.ast_visitors import (ResolveExtendsVisi
 
 from pyschematron.direct_mode.xml_validation.queries.base import EvaluationContext, Query, QueryParser, \
     CachingQueryParser
-from pyschematron.direct_mode.xml_validation.queries.factories import SimpleQueryProcessorFactory
+from pyschematron.direct_mode.xml_validation.queries.factories import DefaultQueryProcessorFactory, QueryProcessorFactory
 from pyschematron.direct_mode.xml_validation.results.validation_results import (CheckResult, PatternResult,
                                                                                 FullNodeResult,
                                                                                 XMLDocumentValidationResult,
@@ -58,7 +58,8 @@ class SimpleSchematronXMLValidator(SchematronXMLValidator):
     def __init__(self,
                  schema: Schema,
                  phase: str | Literal['#ALL', '#DEFAULT'] | None = None,
-                 schematron_base_path: Path | None = None):
+                 schematron_base_path: Path | None = None,
+                 query_processor_factory: QueryProcessorFactory = None):
         """XML validation using a Schematron Schema.
 
         Validation is done into two phases. In the first phase we create a hierarchy of validator objects. These
@@ -70,11 +71,15 @@ class SimpleSchematronXMLValidator(SchematronXMLValidator):
             schema: the Schema AST node. We will make the AST concrete if not yet done so.
             phase: the phase we want to evaluate. If None, we evaluate the default phase.
             schematron_base_path: the base path from which we loaded the Schematron file, provided for context.
+            query_processor_factory: the query processor factory we would like to use to load the query processor
+                from the Schema. By providing this we allow injection of custom query processors.
         """
         self._phase = phase
         self._schema = self._reduce_schema_to_phase(schema, self._phase)
         self._schematron_base_path = schematron_base_path
-        self._query_processor = SimpleQueryProcessorFactory().get_schema_query_processor(schema)
+        self._query_processor_factory = query_processor_factory or DefaultQueryProcessorFactory()
+
+        self._query_processor = self._query_processor_factory.get_schema_query_processor(schema)
         self._query_parser = CachingQueryParser(self._query_processor.get_query_parser())
         self._variable_evaluators = _get_variable_evaluators(self._schema.variables, self._query_parser)
         self._pattern_validators = self._get_pattern_validators()

@@ -6,7 +6,7 @@ __licence__ = 'GPL v3'
 
 from abc import ABCMeta, abstractmethod
 
-from lxml.etree import _Element, Element, SubElement
+from lxml.etree import Element, SubElement, ElementTree, _ElementTree
 
 from datetime import datetime
 
@@ -25,7 +25,7 @@ from pyschematron.direct_mode.xml_validation.results.validation_results import (
 class SVRLReportBuilder(metaclass=ABCMeta):
 
     @abstractmethod
-    def create_svrl_xml(self, validation_result: XMLDocumentValidationResult) -> _Element:
+    def create_svrl_xml(self, validation_result: XMLDocumentValidationResult) -> _ElementTree:
         """Create a Schematron Validation Reporting Language (SVRL) document of the validation results.
 
         This transforms the validation results into an XML document in the SVRL namespace.
@@ -53,7 +53,11 @@ class DefaultSVRLReportBuilder(SVRLReportBuilder):
     checked. This is too comprehensive for the SVRL and as such this class simplifies the results.
     """
 
-    def create_svrl_xml(self, validation_result: XMLDocumentValidationResult) -> _Element:
+    def create_svrl_xml(self, validation_result: XMLDocumentValidationResult) -> _ElementTree:
+        title = None
+        if title_node := validation_result.schema_information.schema.title:
+            title = title_node.content
+
         svrl = SchematronOutput(
             self._get_text_nodes(validation_result),
             self._get_ns_prefix_nodes(validation_result),
@@ -61,10 +65,10 @@ class DefaultSVRLReportBuilder(SVRLReportBuilder):
             metadata=self._get_metadata(validation_result),
             phase=validation_result.schema_information.phase,
             schema_version=validation_result.schema_information.schema.schema_version,
-            title=validation_result.schema_information.schema.title.content)
+            title=title)
 
         writer = LxmlSVRLWriter()
-        return writer.create_xml(svrl)
+        return ElementTree(writer.create_xml(svrl))
 
     def get_validation_events(self, validation_result: XMLDocumentValidationResult) -> list[ValidationEvent]:
         """Extract a list of SVRL validation events from the validation results.

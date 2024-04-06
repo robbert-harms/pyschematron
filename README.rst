@@ -1,12 +1,14 @@
 ############
 PySchematron
 ############
-This is a library for Schematron validation in Python.
+This is a library package for Schematron validation in Python.
 
-Schematron is a formal schema language used to validate XML documents.
+Schematron is a schema language used to validate XML documents.
 A Schematron schema is defined as an XML containing various assertions to validate an XML document.
 If the XML you wish to validate passes all the Schematron assertions,
 your XML is considered valid according to the Schematron schema.
+Complete validation results are offered using the Schematron Validation Report Language,
+a loose definition of an XML based validation report. PySchematron offers this.
 
 There are various versions of Schematron available.
 This library only supports the latest version of Schematron,
@@ -38,10 +40,24 @@ After that you can use:
 
 .. code:: python
 
-    from pyschematron import PySchematron
+    from pyschematron import validate_document
 
-todo
-...
+    result = validate_document(<xml_document.xml>, <schematron_schema.sch>)
+
+    svrl = result.get_svrl()
+    is_valid = result.is_valid()
+
+
+To process multiple documents with the same Schematron schema, you can use:
+
+.. code:: python
+
+    from pyschematron import validate_document
+
+    documents = [...]
+    schema = <schema.sch>
+
+    results = validate_documents(documents, schema)
 
 
 **********************
@@ -81,6 +97,7 @@ When applied to a document, the direct mode evaluation follows this procedure to
 Custom functions
 ----------------
 In the current direct mode evaluation, custom XSLT functions in your Schematron (`<xsl:function>`) are not supported.
+Custom Python functions are supported however. View the `demo_custom_functions.py` in the `scripts` directory for examples.
 
 
 Compliance
