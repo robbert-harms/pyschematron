@@ -159,4 +159,4 @@ install-symlink:
 
 .PHONY: uninstall
 uninstall:
-	pip uninstall $(PROJECT_NAME)
+	$(PIP) uninstall -y $(PROJECT_NAME)

@@ -4,7 +4,6 @@ __maintainer__ = 'Robbert Harms'
 __email__ = 'robbert@xkls.nl'
 __licence__ = 'LGPL v3'
 
-import os
 from pathlib import Path
 
 import typer
@@ -26,10 +25,7 @@ def validate(xml_documents: list[Path] = typer.Argument(help='One or more docume
                                            file_okay=True, dir_okay=False, writable=True)):
 
     if svrl_out:
-        if svrl_out.exists():
-            os.remove(str(svrl_out))
-        else:
-            svrl_out.parent.mkdir(parents=True, exist_ok=True)
+        svrl_out.parent.mkdir(parents=True, exist_ok=True)
 
     if len(xml_documents) == 1:
         result = validate_document(xml_documents[0], schema, phase=phase)
