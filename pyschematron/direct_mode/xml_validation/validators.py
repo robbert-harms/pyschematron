@@ -3,7 +3,7 @@ from __future__ import annotations
 __author__ = 'Robbert Harms'
 __date__ = '2023-02-18'
 __maintainer__ = 'Robbert Harms'
-__email__ = 'robbert@altoida.com'
+__email__ = 'robbert@xkls.nl'
 
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
@@ -91,18 +91,13 @@ class SimpleSchematronXMLValidator(SchematronXMLValidator):
         context = _get_context_with_variables(self._variable_evaluators, root_context)
 
         node_results = []
-        for node in xml_tree.iter():
+        for node in xml_tree.iter_lazy():
             if not node.parent:
                 continue
 
             if not isinstance(node, TextNode):
                 if node_result := self._validate_node(node, context):
                     node_results.append(node_result)
-
-            # due to lazy evaluation of the elementpath library, the attributes are not part of the iteration
-            # unless explicitly called. By calling this property of the node, we add the attributes to the
-            # iteration.
-            node.attributes
 
         xml_information = XMLInformation(xml_document)
         schema_information = SchemaInformation(self._schema, self._phase, self._schematron_base_path)

@@ -3,7 +3,7 @@ from __future__ import annotations
 __author__ = 'Robbert Harms'
 __date__ = '2023-02-21'
 __maintainer__ = 'Robbert Harms'
-__email__ = 'robbert@altoida.com'
+__email__ = 'robbert@xkls.nl'
 
 import dataclasses
 import inspect

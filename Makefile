@@ -128,7 +128,7 @@ prepare-release: clean
 	@echo "Consider manually inspecting CHANGELOG.rst for possible improvements."
 
 .PHONY: release
-release: clean release-git
+release: clean release-git release-pip
 
 .PHONY: release-git
 release-git:
@@ -140,8 +140,7 @@ release-git:
 
 .PHONY: release-pip
 release-pip:
-	$(PYTHON) setup.py sdist bdist_wheel
-	twine upload dist/$(PROJECT_NAME)-$(PROJECT_VERSION).tar.gz dist/$(PROJECT_NAME)-$(PROJECT_VERSION)-py3-none-any.whl
+	flit publish
 
 .PHONY: dist
 dist: clean

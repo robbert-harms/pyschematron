@@ -10,7 +10,7 @@ You can however augment the AST and the parser with your own nodes. This is howe
 __author__ = 'Robbert Harms'
 __date__ = '2023-02-21'
 __maintainer__ = 'Robbert Harms'
-__email__ = 'robbert@altoida.com'
+__email__ = 'robbert@xkls.nl'
 
 from pathlib import Path
 

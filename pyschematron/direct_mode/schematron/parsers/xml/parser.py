@@ -1,7 +1,7 @@
 __author__ = 'Robbert Harms'
 __date__ = '2023-02-16'
 __maintainer__ = 'Robbert Harms'
-__email__ = 'robbert@altoida.com'
+__email__ = 'robbert@xkls.nl'
 
 import os
 from abc import ABCMeta, abstractmethod
@@ -122,7 +122,7 @@ class ElementParser(metaclass=ABCMeta):
         parser = context.parser_factory.get_parser(xml_tag)
 
         items = []
-        for child in elementpath.select(element, xml_tag):
+        for child in elementpath.select(element, xml_tag, namespaces={'': 'http://purl.oclc.org/dsdl/schematron'}):
             items.append(parser.parse(child, context))
 
         return items
