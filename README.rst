@@ -4,11 +4,11 @@ PySchematron
 This is a library package for Schematron validation in Python.
 
 Schematron is a schema language used to validate XML documents.
-A Schematron schema is defined as an XML containing various assertions to validate an XML document.
+A Schematron schema is defined as an XML containing various assertions to validate a target XML document.
 If the XML you wish to validate passes all the Schematron assertions,
 your XML is considered valid according to the Schematron schema.
 Complete validation results are offered using the Schematron Validation Report Language,
-a loose definition of an XML based validation report. PySchematron offers this.
+a loose definition of an XML based validation report.
 
 There are various versions of Schematron available.
 This library only supports the latest version of Schematron,
@@ -16,7 +16,7 @@ This library only supports the latest version of Schematron,
 
 Currently, this library only supports a pure Python mode of Schematron validation.
 In this pure Python mode we load the Schematron into an internal representation and apply that to an XML.
-The advantage of this kind of direct evaluation is that it offers superior performance compared to an XSLT
+The advantage of such direct evaluation is that it offers superior performance compared to an XSLT
 transformation based evaluation.
 The disadvantage is that it only supports XPath expressions and does not support XSLT functions.
 
@@ -30,6 +30,10 @@ A few similar packages to this software in other languages are
 
 For all XPath expressions this package uses the
 `elementpath <https://github.com/sissaschool/elementpath>`_ library supporting XPath 1.0, 2.0, 3.0 and 3.1 selectors.
+
+Please note that, as of this writing, this package only supports Python 3.12.
+Older Python versions are not supported due to missing functionality (Python syntax primarily).
+Newer versions will be supported in due time.
 
 **********
 Python API
