@@ -2,6 +2,14 @@
 Changelog
 *********
 
+v1.0.3 (2024-10-29)
+===================
+
+Changed
+-------
+- Updated elementpath dependency version.
+
+
 v1.0.2 (2024-10-18)
 ===================
 
