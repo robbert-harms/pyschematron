@@ -41,7 +41,8 @@ class XMLDocumentValidationResult(ValidationResult):
     def is_valid(self) -> bool:
         """Return True if the XML document was considered valid, False otherwise.
 
-        An XML document is considered valid if the Schematron had no assertions raised, and all reports were successful.
+        According to the specifications, a successful report is considered a failure. As such, this method considers
+        an XML document to be valid if none of the assertions and none of the reports were raised.
 
         Returns:
             True if the document passed the Schematron validation, False otherwise.
@@ -250,7 +251,7 @@ class FiredRuleResult(RuleResult):
             True if the document passed the Schematron validation, False otherwise.
         """
         for check_result in self.check_results:
-            if not check_result.check_result:
+            if check_result.check_result:
                 return False
         return True
 
@@ -280,6 +281,14 @@ class CheckResult(BaseXMLNodeResult):
     @property
     def check_result(self) -> bool:
         """Get the result of the check.
+
+        In Schematron, tests can be written in one of two ways:
+
+            <sch:assert> outputs a message if an XPath test evaluates to false.
+            <sch:report> outputs a message if an XPath test evaluates to true.
+
+        The test result stored in this class represents the state of the test result, not the final outcome
+        of the check. For that, there is this method.
 
         This checks if the result was a pass or not, it returns a value based on the following combinations:
 
