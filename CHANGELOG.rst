@@ -2,6 +2,14 @@
 Changelog
 *********
 
+v1.1.0 (2024-11-27)
+===================
+
+Fixed
+-----
+- Fixes github bug #5. The reporting of the is_valid method was reversed with regard to assert/report. Also fixed the documentation regarding the is_valid function.
+
+
 v1.0.3 (2024-10-29)
 ===================
 
