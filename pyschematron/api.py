@@ -118,7 +118,8 @@ class ValidationResult(metaclass=ABCMeta):
     def is_valid(self) -> bool:
         """Check if the document we validated was valid.
 
-        A document is considered valid if all the reports were successful and none of the assertions were raised.
+        According to the specifications, a successful report is considered a failure. As such, this method considers
+        an XML document to be valid if none of the assertions and none of the reports were raised.
 
         Returns:
             If the document was valid return True, else False.
