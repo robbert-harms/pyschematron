@@ -2,6 +2,11 @@
 Changelog
 *********
 
+v1.1.2 (2024-12-20)
+===================
+- Bumped required elementpath version to fix bug #6.
+
+
 v1.1.1 (2024-11-27)
 ===================
 
