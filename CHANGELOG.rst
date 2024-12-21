@@ -2,6 +2,11 @@
 Changelog
 *********
 
+v1.1.3 (2024-12-21)
+===================
+- Made rich text evaluation more robust for complex results.
+
+
 v1.1.2 (2024-12-20)
 ===================
 - Bumped required elementpath version to fix bug #6.
