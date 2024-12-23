@@ -2,6 +2,11 @@
 Changelog
 *********
 
+v1.1.4 (2024-12-23)
+===================
+- Made the assert and report checks more robust for queries not returning a single boolean. This fixes the second part of issue #6.
+
+
 v1.1.3 (2024-12-21)
 ===================
 - Made rich text evaluation more robust for complex results.
