@@ -5,6 +5,7 @@ __date__ = '2023-02-18'
 __maintainer__ = 'Robbert Harms'
 __email__ = 'robbert@xkls.nl'
 
+import numbers
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
 from typing import Literal, Any
@@ -352,7 +353,7 @@ class _CheckValidator:
         """
         context = evaluation_context.with_context_item(xml_node)
 
-        check_result = bool(self._check_query.evaluate(context))
+        check_result = self._get_check_result_value(self._check_query.evaluate(context))
         text = self._rich_text_content_evaluator.evaluate(context)
         subject_node = get_subject_node(self._check.subject, self._query_parser, context)
 
@@ -361,6 +362,25 @@ class _CheckValidator:
 
         return CheckResult(_to_result_node(xml_node), evaluation_context, self._check, check_result, text,
                            subject_node, tuple(property_results), tuple(diagnostic_results))
+
+    def _get_check_result_value(self, query_result: Any) -> bool:
+        """Translate the result of the query to a boolean.
+
+        The query result may return a mixed bag of lists, strings and other values which should translate to a single
+        value: True or False. The following rules apply. Any string or numeric value is translated to a boolean value
+        using Python's "bool()" command. Lists or tuples are evaluated recursively and if all terminal values yield
+        true, the result is true, false otherwise.
+
+        Args:
+            query_result: the result of the query, may be a mixed bag
+
+        Returns:
+            The boolean truth value of the query result
+        """
+        if isinstance(query_result, (bool, str, numbers.Number)):
+            return bool(query_result)
+        elif isinstance(query_result, (list, tuple)):
+            return all(map(self._get_check_result_value, query_result))
 
     def _process_properties(self, context: EvaluationContext) -> list[PropertyResult]:
         """Process the optional properties of the check and return a list of property results.
