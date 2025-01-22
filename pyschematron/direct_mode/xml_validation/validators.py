@@ -379,7 +379,11 @@ class _CheckValidator:
         """
         if isinstance(query_result, (bool, str, numbers.Number)):
             return bool(query_result)
+        elif isinstance(query_result, XPathNode):
+            return True
         elif isinstance(query_result, (list, tuple)):
+            if not len(query_result):
+                return False
             return all(map(self._get_check_result_value, query_result))
 
     def _process_properties(self, context: EvaluationContext) -> list[PropertyResult]:
