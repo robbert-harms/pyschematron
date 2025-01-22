@@ -2,6 +2,18 @@
 Changelog
 *********
 
+v1.1.5 (2025-01-22)
+===================
+
+Added
+-----
+- Adds PyPi Homepage url.
+
+Fixed
+-----
+- Fixes bug #7.
+
+
 v1.1.4 (2024-12-23)
 ===================
 - Made the assert and report checks more robust for queries not returning a single boolean. This fixes the second part of issue #6.
