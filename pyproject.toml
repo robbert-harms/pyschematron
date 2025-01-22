@@ -40,6 +40,9 @@ doc = [
     "sphinx~=7.2.6"
 ]
 
+[project.urls]
+homepage = "https://github.com/robbert-harms/pyschematron/"
+
 [project.scripts]
 pyschematron = "pyschematron.cli:app"
 
