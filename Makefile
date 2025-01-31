@@ -124,12 +124,12 @@ prepare-release: clean
         printf 'Setting new version: %s \n\n' \
         	"$$NEW_VERSION " \
 	) && sed -i 's/version = \"\(.*\)\"/version = "'$$NEW_VERSION'"/g' pyproject.toml \
-      && git cliff -l -u --tag $$NEW_VERSION --prepend CHANGELOG.rst
-	@echo "Please manually inspect CHANGELOG.rst before continuing." && read ans
-	git add -u
-	git diff-index --quiet HEAD || git commit -am "release: New release"
-	git tag -a v$(shell grep -m 1 version pyproject.toml | tr -s ' ' | tr -d '"' | tr -d "'" | cut -d' ' -f3) \
-		-m "Version $(shell grep -m 1 version pyproject.toml | tr -s ' ' | tr -d '"' | tr -d "'" | cut -d' ' -f3)"
+      && git cliff -l -u --tag $$NEW_VERSION --prepend CHANGELOG.rst \
+      && echo "Please manually inspect CHANGELOG.rst before continuing." \
+      && read ans \
+      && git add -u \
+	  && git diff-index --quiet HEAD || git commit -am "release: New release" \
+	  && git tag -a v$$NEW_VERSION -m "Version $$NEW_VERSION" \
 
 
 .PHONY: release
