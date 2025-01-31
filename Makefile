@@ -123,9 +123,16 @@ prepare-release: clean
     ( \
         printf 'Setting new version: %s \n\n' \
         	"$$NEW_VERSION " \
-	) && sed -i 's/version = \"\(.*\)\"/version = "'$$NEW_VERSION'"/g' pyproject.toml
-	$(MAKE) docs-changelog
-	@echo "Consider manually inspecting CHANGELOG.rst for possible improvements."
+	) && \
+	( \
+		sed -i 's/version = \"\(.*\)\"/version = "'$$NEW_VERSION'"/g' pyproject.toml \
+    ) && \
+    ( \
+		git add -u \
+    	git diff-index --quiet HEAD || git commit -am "chore\\(release\\): prepare for new release"; \
+		git tag -a v$(PROJECT_VERSION) -m "Version $(PROJECT_VERSION)" \
+    )
+	
 
 .PHONY: release
 release: clean release-git release-pip
