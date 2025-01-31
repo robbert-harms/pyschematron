@@ -137,15 +137,13 @@ release: clean release-git release-pip
 
 .PHONY: release-git
 release-git:
-	git add -u
-	git diff-index --quiet HEAD || git commit -am "release: New release"
 	git push
-	git tag -a v$(PROJECT_VERSION) -m "Version $(PROJECT_VERSION)"
 	git push origin --tags
 
 .PHONY: release-pip
 release-pip:
 	flit publish
+
 
 .PHONY: dist
 dist: clean
