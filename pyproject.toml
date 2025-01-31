@@ -37,7 +37,8 @@ test = [
     "tox~=4.14.1"
 ]
 doc = [
-    "sphinx~=7.2.6"
+    "sphinx~=7.2.6",
+    "git-cliff~=2.8.0"
 ]
 
 [project.urls]

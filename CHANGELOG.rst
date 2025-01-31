@@ -2,8 +2,9 @@
 Changelog
 *********
 
-v1.1.5 (2025-01-22)
-===================
+
+Version 1.1.5 (2025-01-22)
+==========================
 
 Added
 -----
@@ -14,63 +15,86 @@ Fixed
 - Fixes bug #7.
 
 
-v1.1.4 (2024-12-23)
-===================
+Version 1.1.4 (2024-12-23)
+==========================
+
+Other
+-----
 - Made the assert and report checks more robust for queries not returning a single boolean. This fixes the second part of issue #6.
 
+Version 1.1.3 (2024-12-21)
+==========================
 
-v1.1.3 (2024-12-21)
-===================
+Other
+-----
 - Made rich text evaluation more robust for complex results.
 
 
-v1.1.2 (2024-12-20)
-===================
+Version 1.1.2 (2024-12-20)
+==========================
+
+Other
+-----
 - Bumped required elementpath version to fix bug #6.
 
 
-v1.1.1 (2024-11-27)
-===================
+Version 1.1.1 (2024-11-27)
+==========================
 
-Changed
--------
+Other
+-----
 - Updated is_valid comment in the API.
 
 
-v1.1.0 (2024-11-27)
-===================
+Version 1.1.0 (2024-11-27)
+==========================
 
-Fixed
+Other
 -----
-- Fixes github bug #5. The reporting of the is_valid method was reversed with regard to assert/report. Also fixed the documentation regarding the is_valid function.
+- Fixes github bug #5. The reporting of the is_valid method was reversed with regard to assert/report.
+- Fixed the documentation regarding the is_valid function.
 
 
-v1.0.3 (2024-10-29)
-===================
+Version 1.0.3 (2024-10-29)
+==========================
 
-Changed
--------
+Other
+-----
 - Updated elementpath dependency version.
 
 
-v1.0.2 (2024-10-18)
-===================
+Version 1.0.2 (2024-10-18)
+==========================
 
-Changed
--------
-- Updated lxml dependency from 5.1.0 to 5.2.1.
+Other
+-----
 - Updated readme to include supported Python version and other textual changes.
+- Updated lxml dependency from 5.1.0 to 5.2.1
 
 
-v1.0.1 (2024-09-24)
-===================
+Version 1.0.1 (2024-09-24)
+==========================
+
+Other
+-----
 - Upgraded to elementpath==4.5.0
-- fixed email address in info blocks.
+- Fixed email address in info blocks.
 
-v1.0.0 (2024-08-23)
-===================
+
+Version 1.0.0 (2024-08-23)
+==========================
+
+Other
+-----
 First complete version of PySchematron. See the readme for the functionality and limitations.
 
-v0.1.0 (2022-09-10)
-===================
-First version.
+
+Version 0.1.0 (2022-09-12)
+==========================
+
+Other
+-----
+- First version
+
+
+

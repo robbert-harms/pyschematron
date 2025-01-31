@@ -111,7 +111,7 @@ docs-man:
 
 .PHONY: docs-changelog
 docs-changelog:
-	gitchangelog
+	 git cliff --prepend CHANGELOG.rst -l -u
 
 
 .PHONY: prepare-release
