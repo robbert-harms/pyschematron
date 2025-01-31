@@ -123,17 +123,14 @@ prepare-release: clean
     ( \
         printf 'Setting new version: %s \n\n' \
         	"$$NEW_VERSION " \
-	) && \
-	( \
-		sed -i 's/version = \"\(.*\)\"/version = "'$$NEW_VERSION'"/g' pyproject.toml \
-    ) && \
-    ( \
-		git add -u \
-    	git diff-index --quiet HEAD || git commit -am "chore\\(release\\): prepare for new release"; \
-		git tag -a v$$(NEW_VERSION) -m "Version $$(NEW_VERSION)" \
-    )
-	$(MAKE) docs-changelog
-	@echo "Consider manually inspecting CHANGELOG.rst for possible improvements."
+	) && sed -i 's/version = \"\(.*\)\"/version = "'$$NEW_VERSION'"/g' pyproject.toml \
+      && git cliff -l -u --tag $$NEW_VERSION --prepend CHANGELOG.rst
+	@echo "Please manually inspect CHANGELOG.rst before continuing." && read ans
+	git add -u
+	git diff-index --quiet HEAD || git commit -am "release: New release"
+	git tag -a v$(shell grep -m 1 version pyproject.toml | tr -s ' ' | tr -d '"' | tr -d "'" | cut -d' ' -f3) \
+		-m "Version $(shell grep -m 1 version pyproject.toml | tr -s ' ' | tr -d '"' | tr -d "'" | cut -d' ' -f3)"
+
 
 .PHONY: release
 release: clean release-git release-pip
@@ -141,7 +138,7 @@ release: clean release-git release-pip
 .PHONY: release-git
 release-git:
 	git add -u
-	git diff-index --quiet HEAD || git commit -am "New release"
+	git diff-index --quiet HEAD || git commit -am "release: New release"
 	git push
 	git tag -a v$(PROJECT_VERSION) -m "Version $(PROJECT_VERSION)"
 	git push origin --tags

@@ -3,6 +3,14 @@ Changelog
 *********
 
 
+Version 1.1.6 (2025-01-31)
+==========================
+
+Other
+-----
+- Replaced gitchangelog with git-cliff.
+
+
 Version 1.1.5 (2025-01-22)
 ==========================
 
