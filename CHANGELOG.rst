@@ -3,6 +3,14 @@ Changelog
 *********
 
 
+Version 1.1.7 (2025-02-19)
+==========================
+
+Miscellaneous Tasks
+-------------------
+- *(deps\)* Updated all the dependencies.
+
+
 Version 1.1.6 (2025-01-31)
 ==========================
 
