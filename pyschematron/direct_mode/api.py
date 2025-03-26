@@ -36,7 +36,7 @@ class DirectModeSchematronValidatorFactory(SchematronValidatorFactory):
             schematron_xml: the Schematron Schema we want to evaluate. Can also be set using the class methods.
             phase: the phase we would like to evaluate. Can also be set using the class methods. If set to None
                 we use the Schema's default phase.
-            schematron_base_path: explicitly set the Schematron base path.
+            schematron_base_path: explicitly set the Schematron base path, this is used in Schematron file inclusions.
         """
         self._schematron_xml = schematron_xml
         self._phase = phase
