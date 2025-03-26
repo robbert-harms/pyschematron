@@ -3,6 +3,19 @@ Changelog
 *********
 
 
+Version 1.1.8 (2025-03-26)
+==========================
+
+Features
+--------
+- Adds Schematron base path to the function API interface.
+
+Documentation
+-------------
+- Updated editorconfig
+
+
+
 Version 1.1.7 (2025-02-19)
 ==========================
 
