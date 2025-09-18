@@ -609,7 +609,7 @@ def _to_result_node(xpath_node: XPathNode) -> XMLNode:
     path_query = XPath31Parser().parse('path()')
     xpath_location = path_query.evaluate(XPathContext(xpath_node.root_node, item=xpath_node))
 
-    match xpath_node.kind:
+    match xpath_node.node_kind:
         case 'element':
             return ElementNode(xpath_location, xpath_node.elem)
         case 'attribute':
@@ -618,7 +618,7 @@ def _to_result_node(xpath_node: XPathNode) -> XMLNode:
             return ProcessingInstructionNode(xpath_location, xpath_node.elem)
         case 'comment':
             return CommentNode(xpath_location, xpath_node.elem)
-    raise ValueError(f'Could not transform XPathNode of kind "{xpath_node.kind}".')
+    raise ValueError(f'Could not transform XPathNode of kind "{xpath_node.node_kind}".')
 
 
 def get_subject_node(subject_xpath_expression: XPathExpression | None,
