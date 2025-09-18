@@ -3,6 +3,15 @@ Changelog
 *********
 
 
+Version 1.1.9 (2025-09-18)
+==========================
+
+Other
+-----
+- Updated xmlschema, elementpath and lxml dependencies.
+
+
+
 Version 1.1.8 (2025-03-26)
 ==========================
 
