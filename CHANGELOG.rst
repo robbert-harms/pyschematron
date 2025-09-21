@@ -3,6 +3,15 @@ Changelog
 *********
 
 
+Version 1.1.10 (2025-09-21)
+===========================
+
+Other
+-----
+- Relaxed the version constraint on lxml.
+
+
+
 Version 1.1.9 (2025-09-18)
 ==========================
 
