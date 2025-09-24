@@ -3,6 +3,15 @@ Changelog
 *********
 
 
+Version 1.1.11 (2025-09-24)
+===========================
+
+Other
+-----
+- Updated typer dependency and removed the all limiter.
+
+
+
 Version 1.1.10 (2025-09-21)
 ===========================
 
