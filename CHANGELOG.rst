@@ -3,6 +3,16 @@ Changelog
 *********
 
 
+Version 1.1.12 (2025-11-04)
+===========================
+
+Features
+--------
+- The function load_xml_document now accepts a parser instance for flexibility.
+- The XML Schematron writer now allows overriding the default nsmap namespace.
+
+
+
 Version 1.1.11 (2025-09-24)
 ===========================
 
