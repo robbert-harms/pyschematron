@@ -49,7 +49,7 @@ class _SVRLWriterVisitor(SVRLASTVisitor):
         """SVRL XML writer using the visitor pattern.
 
         Args:
-            nsmap: the default namespaces to apply in the SVRL.
+            nsmap: the default namespaces to apply in the SVRL, may be overwritten by the Schematron.
         """
         self._nsmap = nsmap
 
@@ -90,11 +90,7 @@ class _SVRLWriterVisitor(SVRLASTVisitor):
             An element representing the SVRL report.
         """
         for ns_prefix in schematron_output.ns_prefix_in_attribute_values:
-            if ns_prefix.prefix in self._nsmap:
-                raise ValueError(f'Provided namespace "{ns_prefix.prefix}" is not allowed in the Schematron, '
-                                 f'it overlaps with the default SVRL namespaces.')
-            else:
-                self._nsmap[ns_prefix.prefix] = ns_prefix.uri
+            self._nsmap[ns_prefix.prefix] = ns_prefix.uri
 
         node_attributes = {
             'phase': schematron_output.phase,
