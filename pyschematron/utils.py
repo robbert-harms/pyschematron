@@ -13,7 +13,7 @@ from lxml.etree import _ElementTree
 
 
 def load_xml_document(xml_data: Union[bytes, str, Path, IOBase, BinaryIO],
-                      parser: etree.XMLParser = etree.XMLParser(ns_clean=True)) -> _ElementTree:
+                      parser: etree.XMLParser | None = None) -> _ElementTree:
     """Load an XML document from a polymorphic source.
 
     Args:
@@ -23,6 +23,8 @@ def load_xml_document(xml_data: Union[bytes, str, Path, IOBase, BinaryIO],
     Returns:
         The document node of the loaded XML.
     """
+    parser = parser or etree.XMLParser(ns_clean=True)
+
     match xml_data:
         case IOBase():
             return etree.parse(xml_data, parser)
