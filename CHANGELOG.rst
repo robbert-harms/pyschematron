@@ -3,6 +3,15 @@ Changelog
 *********
 
 
+Version 1.1.13 (2025-11-05)
+===========================
+
+Other
+-----
+- Updated default parser in load_xml_document, this improves parallel processing speed according to the documentation of XMLParser.
+
+
+
 Version 1.1.12 (2025-11-04)
 ===========================
 
