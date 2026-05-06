@@ -3,6 +3,15 @@ Changelog
 *********
 
 
+Version 1.1.14 (2026-05-06)
+===========================
+
+Other
+-----
+- Adds the id tag to failed-assert and successfull-report nodes in the SVRL output.
+
+
+
 Version 1.1.13 (2025-11-05)
 ===========================
 
