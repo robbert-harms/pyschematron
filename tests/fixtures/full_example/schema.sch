@@ -60,7 +60,7 @@
                 Volume not correct (<value-of select="@volume"/> vs <value-of select="$max-volume"/> at <name/>).
                 Testing name with path: <name path="//c:cargo"/>
             </assert>
-            <report test="xs:integer(@volume) gt $max-volume">
+            <report test="xs:integer(@volume) gt $max-volume" id="ru_report-volume-check">
                 We report an item with a volume greater than allowed.
             </report>
         </rule>
@@ -121,7 +121,7 @@
     <pattern abstract="true" id="pa_check-category">
         <p>Check if items are in the right category ($pv_category).</p>
         <rule context="$pv_items">
-            <assert test="parent::$pv_category">
+            <assert test="parent::$pv_category" id="pa_assert-category">
                    The item <name/> is in the wrong category ($pv_category).
                    Extra data <value-of select="count(parent::$pv_category)"/>
             </assert>

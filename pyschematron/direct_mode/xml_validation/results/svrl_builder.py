@@ -128,14 +128,16 @@ class DefaultSVRLReportBuilder(SVRLReportBuilder):
                                          SchematronQuery(check_result.check.test.query),
                                          diagnostic_references=tuple(diagnostic_references),
                                          property_references=tuple(property_references),
-                                         subject_location=subject_location)
+                                         subject_location=subject_location,
+                                         id=check_result.check.id)
                 else:
                     event = SuccessfulReport(Text(check_result.text),
                                              XPathExpression(check_result.xml_node.xpath_location),
                                              SchematronQuery(check_result.check.test.query),
                                              diagnostic_references=tuple(diagnostic_references),
                                              property_references=tuple(property_references),
-                                             subject_location=subject_location)
+                                             subject_location=subject_location,
+                                             id=check_result.check.id)
                 events.append(event)
         return events
 
