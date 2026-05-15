@@ -75,6 +75,16 @@ class ElementNode(XMLNode):
     """Representation of an XML element
 
     Args:
-        element: the wrapper XML element.
+        element: the wrapped XML element.
     """
     element: _Element
+
+
+@dataclass(frozen=True, slots=True)
+class DocumentNode(XMLNode):
+    """Representation of an XML document node
+
+    Args:
+        document: the wrapped XML document node.
+    """
+    document: _Element

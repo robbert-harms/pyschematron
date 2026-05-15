@@ -33,7 +33,7 @@ from pyschematron.direct_mode.xml_validation.results.validation_results import (
                                                                                 SchemaInformation, PropertyResult,
                                                                                 DiagnosticResult)
 from pyschematron.direct_mode.xml_validation.results.xml_nodes import XMLNode, ProcessingInstructionNode, ElementNode, \
-    CommentNode, AttributeNode
+    CommentNode, AttributeNode, DocumentNode
 
 
 class SchematronXMLValidator(metaclass=ABCMeta):
@@ -68,6 +68,17 @@ class SimpleSchematronXMLValidator(SchematronXMLValidator):
         schema. During evaluation (e.g. after calling the method `validate_xml`), they are provided with the XML
         node under investigation and are called with a context to be used for evaluating the queries.
 
+        In the validation methodology in this module, we iterate over the nodes in the XML and evaluate all Schematron
+        patterns on each of those nodes. For each XML node, and each rule's context, we check if the context,
+        when applied to the node's parent, contains that very node. For example, in the XML:
+
+            <foo><bar /></foo>
+
+        Suppose we are evaluating the node "<bar />" and the XPath context is 'bar'. We would then evaluate
+        this expression 'bar' on the parent node of "<bar />", i.e. "<foo>" to see if 'bar' would match any node
+        in "<foo>". Since this is the case, we have matched the node "<bar>" with the rule context 'bar' and can
+        now continue to process the checks inside the rule.
+
         Args:
             schema: the Schema AST node. We will make the AST concrete if not yet done so.
             phase: the phase we want to evaluate. If None, we evaluate the default phase.
@@ -93,9 +104,6 @@ class SimpleSchematronXMLValidator(SchematronXMLValidator):
 
         node_results = []
         for node in xml_tree.iter_lazy():
-            if not node.parent:
-                continue
-
             if not isinstance(node, TextNode):
                 if node_result := self._validate_node(node, context):
                     node_results.append(node_result)
@@ -618,6 +626,8 @@ def _to_result_node(xpath_node: XPathNode) -> XMLNode:
             return ProcessingInstructionNode(xpath_location, xpath_node.elem)
         case 'comment':
             return CommentNode(xpath_location, xpath_node.elem)
+        case 'document':
+            return DocumentNode(xpath_location, xpath_node)
     raise ValueError(f'Could not transform XPathNode of kind "{xpath_node.node_kind}".')
 
 

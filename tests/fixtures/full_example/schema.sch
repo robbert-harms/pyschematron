@@ -83,6 +83,11 @@
             </assert>
         </rule>
     </pattern>
+    <pattern id="pa_no-comments-test">
+        <rule context="/">
+            <assert test="not(//comment())">XML must not contain comments.</assert>
+        </rule>
+    </pattern>
 
     <!-- Showcasing that we support checks on attributes. -->
     <pattern id="pa_attribute-test">
