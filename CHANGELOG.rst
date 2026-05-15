@@ -3,6 +3,15 @@ Changelog
 *********
 
 
+Version 1.1.15 (2026-05-15)
+===========================
+
+Bug Fixes
+---------
+- Enable Schematron evaluation on the document node. This should address pyschematron #15 in which the context '/' was not properly activated.
+
+
+
 Version 1.1.14 (2026-05-06)
 ===========================
 
