@@ -3,6 +3,15 @@ Changelog
 *********
 
 
+Version 1.1.16 (2026-05-19)
+===========================
+
+Other
+-----
+- Fixes issue #16 in which comments at the end of the Schematron XML led to incorrect loading of the Schematron XML.
+
+
+
 Version 1.1.15 (2026-05-15)
 ===========================
 
