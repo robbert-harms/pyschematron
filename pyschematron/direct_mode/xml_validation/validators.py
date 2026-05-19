@@ -276,7 +276,7 @@ class _RuleValidator:
         if not self._node_matches_context(xml_node, evaluation_context):
             return SkippedRuleResult(_to_result_node(xml_node), evaluation_context, self._rule)
 
-        context = _get_context_with_variables(self._variable_evaluators, evaluation_context)
+        context = self._extend_context_with_context_variables(xml_node, evaluation_context.with_context_item(xml_node))
         check_results = []
         for check_validator in self._check_validators:
             check_results.append(check_validator.validate(xml_node, context))
@@ -284,6 +284,24 @@ class _RuleValidator:
         subject_node = get_subject_node(self._rule.subject, self._query_parser, context)
 
         return FiredRuleResult(_to_result_node(xml_node), evaluation_context, self._rule, check_results, subject_node)
+
+    def _extend_context_with_context_variables(self,
+                                               xml_node: ItemArgType,
+                                               evaluation_context: EvaluationContext) -> EvaluationContext:
+        """Extend the context with the variables local to the context of the rule.
+
+        When "<let>" variables are defined in a rule, we first have to update the context to match the node we are
+        evaluating, only afterward do we apply the variable evaluations.
+
+        Args:
+            xml_node: the node we are investigating
+            evaluation_context: the evaluation context to expand with the variables
+
+        Returns:
+            The updated evaluation context
+        """
+        return _get_context_with_variables(self._variable_evaluators,
+                                           evaluation_context.with_context_item(xml_node))
 
     def _node_matches_context(self, xml_node: ItemArgType, evaluation_context: EvaluationContext) -> bool:
         """Check if the node we are investigating matches the context of a rule.

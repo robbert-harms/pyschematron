@@ -24,14 +24,26 @@ schematron_xml = load_schematron_xml(
 <schema
     xmlns="http://purl.oclc.org/dsdl/schematron"
     queryBinding="xslt2">
-  <!-- comment inside root element -->
-  <pattern>
-    <rule context="/*">
-      <assert test="false()">should always fail</assert>
-    </rule>
-  </pattern>
+<pattern>
+  <rule context="b">
+
+    <let name="b_value" value="normalize-space(.)"/>
+
+
+    <assert id="b1" test="$b_value = '1234'">b must be 1234</assert>
+    <assert id="b2" test="normalize-space(.) = '1234'">b must be 1234</assert>
+
+    <report id='report1' test="true()">
+      value of $b_value: <value-of select="$b_value"/>
+    </report>
+
+    <report id='report2' test="true()">
+      value of normalize-space(.): <value-of select="normalize-space(.)"/>
+    </report>
+
+  </rule>
+</pattern>
 </schema>
-<!-- comment outside root element -->
 """)
 
 
@@ -58,7 +70,13 @@ schema = PhaseSelectionVisitor(schema).apply(schema)
 
 validator = SimpleSchematronXMLValidator(schema)
 
-xml_document = load_xml_document("""<foo/>""")
+xml_document = load_xml_document("""
+<a>
+  before
+  <b>1234</b>
+  after
+</a>
+""")
 validation_results = validator.validate_xml(xml_document)
 
 svrl_report = DefaultSVRLReportBuilder().create_svrl_xml(validation_results)
