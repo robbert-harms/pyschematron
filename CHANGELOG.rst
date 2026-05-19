@@ -3,6 +3,16 @@ Changelog
 *********
 
 
+Version 1.1.17 (2026-05-19)
+===========================
+
+Other
+-----
+- Adds warnings when the input Schematron files are invalid. Fixes issue #17.
+- Fixes issue #18 in which expressions in let bindings are evaluated in wrong context.
+
+
+
 Version 1.1.16 (2026-05-19)
 ===========================
 
