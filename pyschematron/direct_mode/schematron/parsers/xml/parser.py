@@ -25,6 +25,10 @@ from pyschematron.direct_mode.schematron.parsers.xml.utils import node_to_str, r
 from pyschematron.utils import load_xml_document
 
 
+class InvalidSchematronInput(Exception):
+    """Raised whenever the input Schematron is invalid."""
+
+
 class ParserFactory(metaclass=ABCMeta):
     """Create a parser for parsing a specific XML element into an AST node.
 
@@ -111,19 +115,33 @@ class ElementParser(metaclass=ABCMeta):
         """
 
     @staticmethod
-    def _parse_child_tags[T: Element](element: T, context: ParsingContext, xml_tag: str) -> list[T]:
-        """Parse a sequence of XML elements with the same tag name.
+    def _parse_child_tags(element: Element,
+                          context: ParsingContext,
+                          xml_tag: str,
+                          return_child_elements: bool = False
+                          ) -> list[SchematronASTNode] | list[tuple[Element, SchematronASTNode]]:
+        """Parse a sequence of XML elements with the same tag name and return the parsed elements.
 
         Args:
             element: the element which we search
             context: the parsing context
             xml_tag: the XML tag to search for
+            return_child_elements: if we would like to return the results as a tuple with the found XML element
+                and the Schematron node. Can be useful for debugging or info.
+
+        Returns:
+            The parsed elements.
         """
         parser = context.parser_factory.get_parser(xml_tag)
 
         items = []
         for child in elementpath.select(element, xml_tag, namespaces={'': 'http://purl.oclc.org/dsdl/schematron'}):
-            items.append(parser.parse(child, context))
+            parsed_node = parser.parse(child, context)
+
+            if return_child_elements:
+                items.append((child, parsed_node))
+            else:
+                items.append(parsed_node)
 
         return items
 
@@ -169,6 +187,9 @@ class SchemaParser(ElementParser):
     def parse(self, element: Element, context: ParsingContext | None = None) -> Schema:
         context = context or ParsingContext()
 
+        if (name := etree.QName(element).localname) != 'schema':
+            raise InvalidSchematronInput(f'The provided root element has localname "{name}", expecting "schema".')
+
         builder = SchemaBuilder()
         builder.add_attributes(element.attrib)
         builder.add_patterns(self._parse_child_tags(element, context, 'pattern'))
@@ -182,8 +203,12 @@ class SchemaParser(ElementParser):
         if title_nodes := self._parse_child_tags(element, context, 'title'):
             builder.set_title(title_nodes[0])
 
-        for include_node in self._parse_child_tags(element, context, 'include'):
+        for child_element, include_node in self._parse_child_tags(element, context, 'include',
+                                                                  return_child_elements=True):
             match include_node:
+                case Schema():
+                    raise InvalidSchematronInput(f'Error when including {child_element.attrib["href"]}, '
+                                                 f'schema tag not allowed as include root.')
                 case Pattern():
                     builder.add_patterns([include_node])
                 case Namespace():
@@ -505,7 +530,8 @@ class ExtendsParser(ElementParser):
         rule = parser.parse(xml, context)
 
         if not isinstance(rule, ExternalRule):
-            raise ValueError('The rule defined in the <extends> tag is invalid (contains context or is abstract).')
+            raise InvalidSchematronInput('The rule defined in the <extends> tag '
+                                         'is invalid (contains context or is abstract).')
 
         return ExtendsExternal(rule, file_path)
 

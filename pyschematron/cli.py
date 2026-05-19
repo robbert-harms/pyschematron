@@ -9,6 +9,7 @@ from pathlib import Path
 import typer
 
 from pyschematron import validate_documents, validate_document
+from pyschematron.direct_mode.schematron.parsers.xml.parser import InvalidSchematronInput
 
 app = typer.Typer(no_args_is_help=True, pretty_exceptions_enable=False)
 
@@ -27,19 +28,22 @@ def validate(xml_documents: list[Path] = typer.Argument(help='One or more docume
     if svrl_out:
         svrl_out.parent.mkdir(parents=True, exist_ok=True)
 
-    if len(xml_documents) == 1:
-        result = validate_document(xml_documents[0], schema, phase=phase)
+    try:
+        if len(xml_documents) == 1:
+            result = validate_document(xml_documents[0], schema, phase=phase)
 
-        print(xml_documents[0], 'VALID' if result.is_valid() else 'INVALID')
-
-        if svrl_out:
-            result.get_svrl().write(str(svrl_out), pretty_print=True, xml_declaration=True, encoding="utf-8")
-    else:
-        results = validate_documents(xml_documents, schema, phase=phase)
-
-        for filename, result in zip(xml_documents, results):
-            print(filename, 'VALID' if result.is_valid() else 'INVALID')
+            print(xml_documents[0], 'VALID' if result.is_valid() else 'INVALID')
 
             if svrl_out:
-                out_fname = svrl_out.with_stem(svrl_out.stem + '_' + Path(filename).stem)
-                result.get_svrl().write(str(out_fname), pretty_print=True, xml_declaration=True, encoding="utf-8")
+                result.get_svrl().write(str(svrl_out), pretty_print=True, xml_declaration=True, encoding="utf-8")
+        else:
+            results = validate_documents(xml_documents, schema, phase=phase)
+
+            for filename, result in zip(xml_documents, results):
+                print(filename, 'VALID' if result.is_valid() else 'INVALID')
+
+                if svrl_out:
+                    out_fname = svrl_out.with_stem(svrl_out.stem + '_' + Path(filename).stem)
+                    result.get_svrl().write(str(out_fname), pretty_print=True, xml_declaration=True, encoding="utf-8")
+    except InvalidSchematronInput as ex:
+        print(f'Input Schematron file is invalid: {ex}')

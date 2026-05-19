@@ -18,19 +18,6 @@ from pyschematron.direct_mode.xml_validation.validators import SimpleSchematronX
 from pyschematron.utils import load_xml_document, load_schematron_xml
 
 
-schematron_xml = load_schematron_xml(
-"""
-<schema
-    xmlns="http://purl.oclc.org/dsdl/schematron"
-    queryBinding="xslt2">
-  <!-- comment inside root element -->
-  <pattern>
-    <rule context="/*">
-      <assert test="false()">should always fail</assert>
-    </rule>
-  </pattern>
-</schema>
-""")
 
 schematron_xml = load_schematron_xml(
 """
