@@ -35,7 +35,7 @@ from pyschematron.direct_mode.xml_validation.queries.xpath import (XPathQueryPro
                                                                    SimpleCustomXPathFunction)
 from pyschematron.direct_mode.xml_validation.results.svrl_builder import DefaultSVRLReportBuilder
 from pyschematron.direct_mode.xml_validation.validators import SimpleSchematronXMLValidator
-from pyschematron.utils import load_xml_document
+from pyschematron.utils import load_xml_document, load_schematron_xml
 
 
 def get_example_schema() -> _ElementTree:
@@ -64,7 +64,7 @@ def get_example_schema() -> _ElementTree:
         </pattern>
     </schema>
     '''
-    return load_xml_document(schematron)
+    return load_schematron_xml(schematron)
 
 
 def get_example_xml_document() -> _ElementTree:

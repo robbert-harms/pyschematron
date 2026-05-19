@@ -21,7 +21,7 @@ from pyschematron.direct_mode.xml_validation.queries.factories import Extendable
 from pyschematron.direct_mode.xml_validation.results.svrl_builder import DefaultSVRLReportBuilder
 from pyschematron.direct_mode.xml_validation.results.validation_results import XMLDocumentValidationResult
 from pyschematron.direct_mode.xml_validation.validators import SimpleSchematronXMLValidator
-from pyschematron.utils import load_xml_document
+from pyschematron.utils import load_xml_document, load_schematron_xml
 
 
 class DirectModeSchematronValidatorFactory(SchematronValidatorFactory):
@@ -67,7 +67,7 @@ class DirectModeSchematronValidatorFactory(SchematronValidatorFactory):
 
     def build(self) -> SchematronValidator:
         if isinstance(self._schematron_xml, Path):
-            schematron = load_xml_document(self._schematron_xml)
+            schematron = load_schematron_xml(self._schematron_xml)
         else:
             schematron = self._schematron_xml
 

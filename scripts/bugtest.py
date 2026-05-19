@@ -7,6 +7,7 @@ __email__ = 'robbert@xkls.nl'
 
 from pathlib import Path
 
+import elementpath
 from lxml import etree
 
 from pyschematron.direct_mode.schematron.ast_visitors import ResolveExtendsVisitor, \
@@ -16,27 +17,61 @@ from pyschematron.direct_mode.xml_validation.results.svrl_builder import Default
 from pyschematron.direct_mode.xml_validation.validators import SimpleSchematronXMLValidator
 from pyschematron.utils import load_xml_document, load_schematron_xml
 
-'''
-cd programming/python/pyschematron/tests/fixtures/full_example/
-java -jar ~/programming/java/schxslt-cli.jar -d cargo.xml -s schema.sch -o /tmp/report.xml
-'''
 
-example_path = Path('../tests/fixtures/full_example/')
-schematron_path = example_path / 'schema.sch'
-phase = '#ALL'
+schematron_xml = load_schematron_xml(
+"""
+<schema
+    xmlns="http://purl.oclc.org/dsdl/schematron"
+    queryBinding="xslt2">
+  <!-- comment inside root element -->
+  <pattern>
+    <rule context="/*">
+      <assert test="false()">should always fail</assert>
+    </rule>
+  </pattern>
+</schema>
+""")
 
-schematron_xml = load_schematron_xml(schematron_path)
-parsing_context = ParsingContext(base_path=schematron_path.parent)
+schematron_xml = load_schematron_xml(
+"""
+<schema
+    xmlns="http://purl.oclc.org/dsdl/schematron"
+    queryBinding="xslt2">
+  <!-- comment inside root element -->
+  <pattern>
+    <rule context="/*">
+      <assert test="false()">should always fail</assert>
+    </rule>
+  </pattern>
+</schema>
+<!-- comment outside root element -->
+""")
+
+
+
+# schematron_xml = load_xml_document(
+# """
+# <schema xmlns="http://purl.oclc.org/dsdl/schematron" queryBinding="xslt2">
+#   <pattern id="no-comments">
+#     <rule context="comment()">
+#       <assert test="false()">Comments are not allowed.</assert>
+#     </rule>
+#   </pattern>
+# </schema>
+# """)
+
+
+parsing_context = ParsingContext()
 
 schematron_parser = SchemaParser()
 schema = schematron_parser.parse(schematron_xml.getroot(), parsing_context)
 schema = ResolveExtendsVisitor(schema).apply(schema)
 schema = ResolveAbstractPatternsVisitor(schema).apply(schema)
-schema = PhaseSelectionVisitor(schema, phase).apply(schema)
+schema = PhaseSelectionVisitor(schema).apply(schema)
 
-validator = SimpleSchematronXMLValidator(schema, phase, parsing_context.base_path)
+validator = SimpleSchematronXMLValidator(schema)
 
-xml_document = load_xml_document(example_path / 'cargo.xml')
+xml_document = load_xml_document("""<foo/>""")
 validation_results = validator.validate_xml(xml_document)
 
 svrl_report = DefaultSVRLReportBuilder().create_svrl_xml(validation_results)

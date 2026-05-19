@@ -35,3 +35,21 @@ def load_xml_document(xml_data: Union[bytes, str, Path, IOBase, BinaryIO],
         case Path():
             with open(xml_data, 'rb') as f:
                 return load_xml_document(f, parser=parser)
+
+
+def load_schematron_xml(schematron_xml_data: Union[bytes, str, Path, IOBase, BinaryIO],
+                        parser: etree.XMLParser | None = None) -> _ElementTree:
+    """Specialized loader for loading a Schematron XML file.
+
+    This makes sure comments at the end of the XML are stripped away, otherwise this library may fail to read the
+    correct schema node.
+
+    Args:
+        schematron_xml_data: the XML data to load. Can be loaded from a string, file, or byte-like object.
+        parser: the XMLParser to use. Can be specialized for your use-case.
+
+    Returns:
+        The document node of the loaded Schematron XML.
+    """
+    parser = parser or etree.XMLParser(ns_clean=True, remove_comments=True)
+    return load_xml_document(schematron_xml_data, parser)

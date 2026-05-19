@@ -165,3 +165,4 @@
     <!-- Showcasing include -->
     <include href="diagnostics.sch"/>
 </schema>
+<!-- Tests if comments after the root schema are ignored. -->

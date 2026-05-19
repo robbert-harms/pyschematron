@@ -18,11 +18,11 @@ from pyschematron.direct_mode.schematron.ast_visitors import ResolveExtendsVisit
     PhaseSelectionVisitor
 from pyschematron.direct_mode.schematron.ast_yaml import RuyamlASTYamlConverter
 from pyschematron.direct_mode.schematron.parsers.xml.parser import ParsingContext, SchemaParser
-from pyschematron.utils import load_xml_document
+from pyschematron.utils import load_xml_document, load_schematron_xml
 
 
 schematron_path = Path('../tests/fixtures/full_example/schema.sch')
-schematron_xml = load_xml_document(schematron_path)
+schematron_xml = load_schematron_xml(schematron_path)
 parsing_context = ParsingContext(base_path=schematron_path.parent)
 
 # Parse the Schema

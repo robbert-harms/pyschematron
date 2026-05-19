@@ -27,8 +27,7 @@ from pyschematron.direct_mode.schematron.ast_visitors import ResolveExtendsVisit
 from pyschematron.direct_mode.schematron.parsers.xml.parser import SchemaParser, ParsingContext
 from pyschematron.direct_mode.xml_validation.results.svrl_builder import DefaultSVRLReportBuilder
 from pyschematron.direct_mode.xml_validation.validators import SimpleSchematronXMLValidator
-from pyschematron.utils import load_xml_document
-
+from pyschematron.utils import load_xml_document, load_schematron_xml
 
 # the paths to the example data and Schema
 example_base_path = Path('../tests/fixtures/full_example/')
@@ -67,7 +66,7 @@ def demo_generic_api():
 
 def demo_full_api():
     """This demonstrates the inner workings of the direct-mode validator."""
-    schematron_xml = load_xml_document(schematron_schema_path)
+    schematron_xml = load_schematron_xml(schematron_schema_path)
     parsing_context = ParsingContext(base_path=schematron_schema_path.parent)
 
     schematron_parser = SchemaParser()
