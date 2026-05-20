@@ -3,6 +3,15 @@ Changelog
 *********
 
 
+Version 1.1.18 (2026-05-20)
+===========================
+
+Other
+-----
+- In the validation output, adds a flag ignore_successful_reports to ignore successful reports in the valid/invalid statement.
+
+
+
 Version 1.1.17 (2026-05-19)
 ===========================
 
