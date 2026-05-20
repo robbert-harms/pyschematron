@@ -38,19 +38,44 @@ class XMLDocumentValidationResult(ValidationResult):
     schema_information: SchemaInformation
     node_results: tuple[FullNodeResult, ...]
 
-    def is_valid(self) -> bool:
+    def is_valid(self, ignore_successful_reports: bool = False) -> bool:
         """Return True if the XML document was considered valid, False otherwise.
 
         According to the specifications, a successful report is considered a failure. As such, this method considers
         an XML document to be valid if none of the assertions and none of the reports were raised.
 
+        Nevertheless, some users find it more intuitive if only failed asserts lead to an invalid XML. As such,
+        one may set the flag ignore_successful_reports to True, in order to only count failed asserts towards an
+        invalid XML.
+
         Returns:
             True if the document passed the Schematron validation, False otherwise.
         """
+        if ignore_successful_reports:
+            return not self.has_failed_asserts()
+        return not self.has_failed_asserts() and not self.has_successful_reports()
+
+    def has_failed_asserts(self) -> bool:
+        """Check to see if there are any failed asserts.
+
+        Returns:
+            True if there is any failed assert, false otherwise
+        """
         for node_result in self.node_results:
-            if not node_result.is_valid():
-                return False
-        return True
+            if node_result.has_failed_asserts():
+                return True
+        return False
+
+    def has_successful_reports(self) -> bool:
+        """Check to see if there are any successful reports
+
+        Returns:
+            True if there is any successful report, false otherwise.
+        """
+        for node_result in self.node_results:
+            if node_result.has_successful_report():
+                return True
+        return False
 
 
 @dataclass(slots=True, frozen=True)
@@ -104,16 +129,27 @@ class FullNodeResult(BaseXMLNodeResult):
     """
     pattern_results: tuple[PatternResult, ...]
 
-    def is_valid(self) -> bool:
-        """Return True if all patterns yielded a valid results, False otherwise.
+    def has_failed_asserts(self) -> bool:
+        """Check to see if there are any failed asserts.
 
         Returns:
-            True if the document passed the Schematron validation, False otherwise.
+            True if there are failed asserts, false otherwise.
         """
         for pattern_result in self.pattern_results:
-            if not pattern_result.is_valid():
-                return False
-        return True
+            if pattern_result.has_failed_asserts():
+                return True
+        return False
+
+    def has_successful_report(self) -> bool:
+        """Check to see if there are any successful reports.
+
+        Returns:
+            True if there are successful reports, false otherwise.
+        """
+        for pattern_result in self.pattern_results:
+            if pattern_result.has_successful_report():
+                return True
+        return False
 
 
 @dataclass(slots=True, frozen=True)
@@ -135,17 +171,29 @@ class PatternResult(BaseXMLNodeResult):
         """
         return any(result.is_fired() for result in self.rule_results)
 
-    def is_valid(self) -> bool:
-        """Return True if all rules yielded a valid results, False otherwise.
+    def has_failed_asserts(self) -> bool:
+        """Check to see if there are any failed asserts.
 
         Returns:
-            True if the document passed the Schematron validation, False otherwise.
+            True if there are failed asserts, false otherwise.
         """
         for rule_result in self.rule_results:
             if isinstance(rule_result, FiredRuleResult):
-                if not rule_result.is_valid():
-                    return False
-        return True
+                if rule_result.has_failed_asserts():
+                    return True
+        return False
+
+    def has_successful_report(self) -> bool:
+        """Check to see if there are any successful reports.
+
+        Returns:
+            True if there are successful reports, false otherwise.
+        """
+        for rule_result in self.rule_results:
+            if isinstance(rule_result, FiredRuleResult):
+                if rule_result.has_successful_report():
+                    return True
+        return False
 
 
 @dataclass(slots=True, frozen=True)
@@ -244,16 +292,27 @@ class FiredRuleResult(RuleResult):
     def is_suppressed(self) -> bool:
         return False
 
-    def is_valid(self) -> bool:
-        """Return True if all checks yielded a valid results, False otherwise.
+    def has_failed_asserts(self) -> bool:
+        """Check to see if there are any failed asserts.
 
         Returns:
-            True if the document passed the Schematron validation, False otherwise.
+            True if there are failed asserts, false otherwise.
         """
         for check_result in self.check_results:
-            if check_result.check_result:
-                return False
-        return True
+            if check_result.is_failed_assert():
+                return True
+        return False
+
+    def has_successful_report(self) -> bool:
+        """Check to see if there are any successful reports.
+
+        Returns:
+            True if there are successful reports, false otherwise.
+        """
+        for check_result in self.check_results:
+            if check_result.is_successful_report():
+                return True
+        return False
 
 
 @dataclass(slots=True, frozen=True)
@@ -309,6 +368,24 @@ class CheckResult(BaseXMLNodeResult):
             return not self.test_result
         else:
             return self.test_result
+
+    def is_failed_assert(self) -> bool:
+        """Check to see if this check contains a failed assert.
+
+        Returns:
+            True if the check evaluates to a failed asserts, false otherwise. If the check was of type report, we
+                always return False.
+        """
+        return isinstance(self.check, Assert) and self.check_result
+
+    def is_successful_report(self) -> bool:
+        """Check to see if this check contains a successful report.
+
+        Returns:
+            True if the check evaluates to a successful report, false otherwise. If the check was of type assert, we
+                always return False.
+        """
+        return isinstance(self.check, Report) and self.check_result
 
 
 @dataclass(slots=True, frozen=True)

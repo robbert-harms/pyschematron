@@ -175,10 +175,9 @@ class DirectModeValidationResult(ValidationResult):
         """
         self._validation_results = validation_results
         self._svrl_report = DefaultSVRLReportBuilder().create_svrl_xml(validation_results)
-        self._is_valid = validation_results.is_valid()
 
     def get_svrl(self) -> _ElementTree:
         return self._svrl_report
 
-    def is_valid(self) -> bool:
-        return self._is_valid
+    def is_valid(self, ignore_successful_reports: bool = False) -> bool:
+        return self._validation_results.is_valid(ignore_successful_reports)

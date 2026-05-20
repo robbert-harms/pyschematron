@@ -25,21 +25,13 @@ schematron_xml = load_schematron_xml(
     xmlns="http://purl.oclc.org/dsdl/schematron"
     queryBinding="xslt2">
 <pattern>
-  <rule context="b">
+  <rule context="/*">
 
-    <let name="b_value" value="normalize-space(.)"/>
-
-
-    <assert id="b1" test="$b_value = '1234'">b must be 1234</assert>
-    <assert id="b2" test="normalize-space(.) = '1234'">b must be 1234</assert>
-
-    <report id='report1' test="true()">
-      value of $b_value: <value-of select="$b_value"/>
+    <report test="true()">
+      hello world
     </report>
 
-    <report id='report2' test="true()">
-      value of normalize-space(.): <value-of select="normalize-space(.)"/>
-    </report>
+    <assert id="dummy" test="true()">always true</assert>
 
   </rule>
 </pattern>
@@ -71,11 +63,7 @@ schema = PhaseSelectionVisitor(schema).apply(schema)
 validator = SimpleSchematronXMLValidator(schema)
 
 xml_document = load_xml_document("""
-<a>
-  before
-  <b>1234</b>
-  after
-</a>
+<foo/>
 """)
 validation_results = validator.validate_xml(xml_document)
 
@@ -86,5 +74,9 @@ with open('/tmp/report_pyschematron.xml', 'w') as f:
     f.write(report_str)
 
 print(report_str)
+print(validation_results.is_valid())
+print(validation_results.is_valid(ignore_successful_reports=True))
+print(validation_results.has_failed_asserts())
+print(validation_results.has_successful_reports())
 
 print()

@@ -5,6 +5,7 @@ __email__ = 'robbert@xkls.nl'
 __licence__ = 'LGPL v3'
 
 from pathlib import Path
+from typing import Annotated
 
 import typer
 
@@ -23,7 +24,10 @@ def validate(xml_documents: list[Path] = typer.Argument(help='One or more docume
              svrl_out: Path = typer.Option(None, '--svrl-out',
                                            help='The file to write the SVRL to. '
                                                 'For multiple documents we append the XML document name to this name.',
-                                           file_okay=True, dir_okay=False, writable=True)):
+                                           file_okay=True, dir_okay=False, writable=True),
+             ignore_successful_reports: Annotated[bool,
+             typer.Option("--ignore_successful_reports",
+                          help="Ignoring successful reports in the validation statement.")] = False):
 
     if svrl_out:
         svrl_out.parent.mkdir(parents=True, exist_ok=True)
@@ -32,7 +36,8 @@ def validate(xml_documents: list[Path] = typer.Argument(help='One or more docume
         if len(xml_documents) == 1:
             result = validate_document(xml_documents[0], schema, phase=phase)
 
-            print(xml_documents[0], 'VALID' if result.is_valid() else 'INVALID')
+            validation_statement = result.is_valid(ignore_successful_reports=ignore_successful_reports)
+            print(xml_documents[0], 'VALID' if validation_statement else 'INVALID')
 
             if svrl_out:
                 result.get_svrl().write(str(svrl_out), pretty_print=True, xml_declaration=True, encoding="utf-8")
@@ -40,7 +45,8 @@ def validate(xml_documents: list[Path] = typer.Argument(help='One or more docume
             results = validate_documents(xml_documents, schema, phase=phase)
 
             for filename, result in zip(xml_documents, results):
-                print(filename, 'VALID' if result.is_valid() else 'INVALID')
+                validation_statement = result.is_valid(ignore_successful_reports=ignore_successful_reports)
+                print(filename, 'VALID' if validation_statement else 'INVALID')
 
                 if svrl_out:
                     out_fname = svrl_out.with_stem(svrl_out.stem + '_' + Path(filename).stem)

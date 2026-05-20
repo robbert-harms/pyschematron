@@ -115,11 +115,15 @@ class ValidationResult(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def is_valid(self) -> bool:
+    def is_valid(self, ignore_successful_reports: bool = False) -> bool:
         """Check if the document we validated was valid.
 
         According to the specifications, a successful report is considered a failure. As such, this method considers
         an XML document to be valid if none of the assertions and none of the reports were raised.
+
+        Nevertheless, some users find it more intuitive if only failed asserts lead to an invalid XML. As such,
+        one may set the flag ignore_successful_reports to True, in order to only count failed asserts towards an
+        invalid XML.
 
         Returns:
             If the document was valid return True, else False.
