@@ -3,6 +3,15 @@ Changelog
 *********
 
 
+Version 1.2.0 (2026-05-22)
+==========================
+
+Other
+-----
+- Changed the behaviour of the validation statement to only take into account failed asserts by default. A flag successful_reports_invalidate can be set if successful reports should also invalidate an XML.
+
+
+
 Version 1.1.18 (2026-05-20)
 ===========================
 
