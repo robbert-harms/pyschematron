@@ -38,22 +38,21 @@ class XMLDocumentValidationResult(ValidationResult):
     schema_information: SchemaInformation
     node_results: tuple[FullNodeResult, ...]
 
-    def is_valid(self, ignore_successful_reports: bool = False) -> bool:
+    def is_valid(self, successful_reports_invalidate: bool = False) -> bool:
         """Return True if the XML document was considered valid, False otherwise.
 
-        According to the specifications, a successful report is considered a failure. As such, this method considers
-        an XML document to be valid if none of the assertions and none of the reports were raised.
+        By default, only failed asserts invalidate an XML. If however you want successful reports also to invalidate
+        the XML, set the corresponding flag to true.
 
-        Nevertheless, some users find it more intuitive if only failed asserts lead to an invalid XML. As such,
-        one may set the flag ignore_successful_reports to True, in order to only count failed asserts towards an
-        invalid XML.
+        Args:
+            successful_reports_invalidate: if successful reports should invalidate the report
 
         Returns:
             True if the document passed the Schematron validation, False otherwise.
         """
-        if ignore_successful_reports:
-            return not self.has_failed_asserts()
-        return not self.has_failed_asserts() and not self.has_successful_reports()
+        if successful_reports_invalidate:
+            return not self.has_failed_asserts() and not self.has_successful_reports()
+        return not self.has_failed_asserts()
 
     def has_failed_asserts(self) -> bool:
         """Check to see if there are any failed asserts.

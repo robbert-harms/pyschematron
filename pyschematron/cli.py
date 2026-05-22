@@ -25,9 +25,9 @@ def validate(xml_documents: list[Path] = typer.Argument(help='One or more docume
                                            help='The file to write the SVRL to. '
                                                 'For multiple documents we append the XML document name to this name.',
                                            file_okay=True, dir_okay=False, writable=True),
-             ignore_successful_reports: Annotated[bool,
-             typer.Option("--ignore_successful_reports",
-                          help="Ignoring successful reports in the validation statement.")] = False):
+             successful_reports_invalidate: Annotated[bool,
+             typer.Option("--successful_reports_invalidate",
+                          help="Let successful reports also invalidate an XML.")] = False):
 
     if svrl_out:
         svrl_out.parent.mkdir(parents=True, exist_ok=True)
@@ -36,7 +36,7 @@ def validate(xml_documents: list[Path] = typer.Argument(help='One or more docume
         if len(xml_documents) == 1:
             result = validate_document(xml_documents[0], schema, phase=phase)
 
-            validation_statement = result.is_valid(ignore_successful_reports=ignore_successful_reports)
+            validation_statement = result.is_valid(successful_reports_invalidate=successful_reports_invalidate)
             print(xml_documents[0], 'VALID' if validation_statement else 'INVALID')
 
             if svrl_out:
@@ -45,7 +45,7 @@ def validate(xml_documents: list[Path] = typer.Argument(help='One or more docume
             results = validate_documents(xml_documents, schema, phase=phase)
 
             for filename, result in zip(xml_documents, results):
-                validation_statement = result.is_valid(ignore_successful_reports=ignore_successful_reports)
+                validation_statement = result.is_valid(successful_reports_invalidate=successful_reports_invalidate)
                 print(filename, 'VALID' if validation_statement else 'INVALID')
 
                 if svrl_out:

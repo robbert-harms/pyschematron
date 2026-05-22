@@ -75,7 +75,7 @@ with open('/tmp/report_pyschematron.xml', 'w') as f:
 
 print(report_str)
 print(validation_results.is_valid())
-print(validation_results.is_valid(ignore_successful_reports=True))
+print(validation_results.is_valid(successful_reports_invalidate=True))
 print(validation_results.has_failed_asserts())
 print(validation_results.has_successful_reports())
 
