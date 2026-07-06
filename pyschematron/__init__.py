@@ -9,7 +9,7 @@ from typing import Literal
 from lxml.etree import _ElementTree
 
 from pyschematron.__version__ import __version__
-from pyschematron.api import ValidationResult
+from pyschematron.api import ValidationResult, SchematronValidator
 from pyschematron.direct_mode.api import DirectModeSchematronValidatorFactory
 from pyschematron.direct_mode.xml_validation.queries.base import CustomQueryFunction
 
@@ -38,12 +38,38 @@ def validate_document(xml_document: Path | _ElementTree,
     Returns:
         The validation result in an API wrapper.
     """
-    validator_factory = DirectModeSchematronValidatorFactory(schematron_xml=schematron_schema, phase=phase,
-                                                             schematron_base_path=schematron_base_path)
+    validator = create_validator(schematron_schema=schematron_schema, phase=phase,
+                                 custom_functions=custom_functions, mode=mode)
+    return validator.validate(xml_document)
+
+
+def create_validator(schematron_schema: Path | _ElementTree,
+                     phase: str | None = None,
+                     custom_functions: dict[str, str | list[CustomQueryFunction]] | None = None,
+                     mode: Literal['direct-mode'] = 'direct-mode') -> SchematronValidator:
+    """Create a Schematron validator which can be used to validate multiple XML documents.
+
+    This will prepare the Schematron schema for validator. Since the same phase will be used for each validation run,
+    we can precompile the schematron validator.
+
+    Args:
+        schematron_schema: the Schematron Schema we would like to load and use for the validation
+        phase: the Schematron phase we would like to use, optional.
+        custom_functions: a dictionary defining additional custom functions to add to the parser(s).
+            This should at least contain the key 'query_binding' mapping to a query binding name, and the
+            key 'custom_query_functions' specifying a list of custom query functions to add.
+            For non-standard query binding language, you also need to provide the key 'base_query_binding'
+            mapping to a standard query binding. Example usage:
+            `{'query_binding': 'xpath31-custom', 'base_query_binding': 'xpath31', 'custom_query_functions': [...]}`.
+        mode: which validation mode we would like to use, at the moment this only supports the 'direct-mode'.
+
+    Returns:
+        The validator. Use the method "validate" to validate a document.
+    """
+    validator_factory = DirectModeSchematronValidatorFactory(schematron_xml=schematron_schema, phase=phase)
     if custom_functions:
         validator_factory.add_custom_functions(**custom_functions)
-    validator = validator_factory.build()
-    return validator.validate(xml_document)
+    return validator_factory.build()
 
 
 def validate_documents(xml_documents: list[Path | _ElementTree],
@@ -71,15 +97,8 @@ def validate_documents(xml_documents: list[Path | _ElementTree],
     Returns:
         The validation results in an API wrapper.
     """
-    validator_factory = DirectModeSchematronValidatorFactory(schematron_xml=schematron_schema, phase=phase)
-    if custom_functions:
-        validator_factory.add_custom_functions(**custom_functions)
-    validator = validator_factory.build()
-
-    validation_results = []
-    for document in xml_documents:
-        validation_results.append(validator.validate(document))
-
-    return validation_results
+    validator = create_validator(schematron_schema=schematron_schema, phase=phase,
+                                 custom_functions=custom_functions, mode=mode)
+    return [validator.validate(document) for document in xml_documents]
 
 
