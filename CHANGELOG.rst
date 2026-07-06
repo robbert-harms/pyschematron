@@ -3,6 +3,19 @@ Changelog
 *********
 
 
+Version 1.2.1 (2026-07-06)
+==========================
+
+Features
+--------
+- Adds a public api method for generating a validator to be reused with multiple documents. Provides for request #20.
+- Adds support for loading an XML document from an XML element. This fixes the use case issue #21.
+
+Other
+-----
+- Adds yaml demo for future work.
+
+
 Version 1.2.0 (2026-05-22)
 ==========================
 

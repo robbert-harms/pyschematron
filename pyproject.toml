@@ -2,7 +2,7 @@
 name = "pyschematron"
 description = "Schematron validation in Python."
 readme = "README.rst"
-version = "1.2.0"
+version = "1.2.1"
 requires-python = ">=3.12"
 keywords = ["Schematron", "XML validation"]
 classifiers = [
