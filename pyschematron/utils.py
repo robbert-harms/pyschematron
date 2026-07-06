@@ -9,10 +9,10 @@ from pathlib import Path
 from typing import BinaryIO, Union
 
 from lxml import etree
-from lxml.etree import _ElementTree
+from lxml.etree import _ElementTree, _Element
 
 
-def load_xml_document(xml_data: Union[bytes, str, Path, IOBase, BinaryIO],
+def load_xml_document(xml_data: Union[bytes, str, Path, IOBase, BinaryIO, _ElementTree, _Element],
                       parser: etree.XMLParser | None = None) -> _ElementTree:
     """Load an XML document from a polymorphic source.
 
@@ -26,6 +26,10 @@ def load_xml_document(xml_data: Union[bytes, str, Path, IOBase, BinaryIO],
     parser = parser or etree.XMLParser(ns_clean=True)
 
     match xml_data:
+        case _Element():
+            return etree.ElementTree(xml_data)
+        case _ElementTree():
+            return xml_data
         case IOBase():
             return etree.parse(xml_data, parser)
         case bytes():

@@ -156,11 +156,7 @@ class DirectModeSchematronValidator(SchematronValidator):
                                                        query_processor_factory=query_processor_factory)
 
     def validate(self, xml_data: Path | _ElementTree) -> ValidationResult:
-        if isinstance(xml_data, Path):
-            xml_document = load_xml_document(xml_data)
-        else:
-            xml_document = xml_data
-
+        xml_document = load_xml_document(xml_data)
         validation_results = self._validator.validate_xml(xml_document)
         return DirectModeValidationResult(validation_results)
 
