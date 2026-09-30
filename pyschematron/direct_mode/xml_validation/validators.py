@@ -256,7 +256,8 @@ class _RuleValidator:
         self._rule = rule
         self._variable_evaluators = _get_variable_evaluators(self._rule.variables, self._query_parser)
         self._check_validators = self._get_check_validators()
-        self._context_query = self._query_parser.parse(self._rule.context.query)
+        self._context_query = self._query_parser.parse_match_pattern(self._rule.context.query)
+        self._context_matches: tuple[Any, frozenset[int]] | None = None
 
     def validate(self,
                  xml_node: ItemArgType,
@@ -306,23 +307,28 @@ class _RuleValidator:
     def _node_matches_context(self, xml_node: ItemArgType, evaluation_context: EvaluationContext) -> bool:
         """Check if the node we are investigating matches the context of a rule.
 
-        We perform the check by querying the parent of the node for a match on the context of the rule.
-        There may be multiple matches, as such we check if the node is within the matches. If so, the node
-        must match the context query of the Schematron rule.
+        The rule context is a match pattern. We select all the nodes in the document matching it, and check if the
+        node is among them. Since this selection is the same for every node in a document, we compute it once per
+        document and keep it until another document is validated.
 
         Args:
             xml_node: the node we are investigating
-            evaluation_context: the evaluation context. We will relativize this to the parent of the XML node.
+            evaluation_context: the evaluation context. We will relativize this to the root of the XML document.
 
         Returns:
             True if the node matches the rule, false otherwise.
         """
-        parent_context = evaluation_context.with_context_item(xml_node.parent)
+        xml_root = evaluation_context.get_xml_root()
 
-        if matches := self._context_query.evaluate(parent_context):
-            if xml_node in matches:
-                return True
-        return False
+        context_matches = self._context_matches
+        if context_matches is None or context_matches[0] is not xml_root:
+            matches = self._context_query.evaluate(evaluation_context.with_context_item(xml_root))
+            if not isinstance(matches, list):
+                matches = [matches]
+            context_matches = (xml_root, frozenset(id(match) for match in matches if isinstance(match, XPathNode)))
+            self._context_matches = context_matches
+
+        return id(xml_node) in context_matches[1]
 
     def _get_check_validators(self) -> list[_CheckValidator]:
         """Initialize the assert and report validators.

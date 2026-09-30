@@ -106,6 +106,21 @@ class QueryParser(metaclass=ABCMeta):
         """
 
     @abstractmethod
+    def parse_match_pattern(self, source: str) -> Query:
+        """Parse a rule context into a query selecting every node matching it.
+
+        A rule context is a match pattern, not a path to evaluate from a given node. For example, the context `a/b`
+        matches every `b` element whose parent is an `a` element, at any depth in the document. The returned query,
+        evaluated with the document root as context item, selects exactly those nodes.
+
+        Args:
+            source: the source code of the rule context, in the language supported by this parser.
+
+        Returns:
+            A parsed query selecting all the nodes matching the rule context.
+        """
+
+    @abstractmethod
     def with_namespaces(self, namespaces: dict[str, str]) -> Self:
         """Create a copy of this query parser with updated namespaces.
 
@@ -140,10 +155,15 @@ class CachingQueryParser(QueryParser):
         """
         self._query_parser = query_parser
         self._query_cache = {}
+        self._match_pattern_cache = {}
 
     @override
     def parse(self, source: str) -> Query:
         return self._query_cache.setdefault(source, self._query_parser.parse(source))
+
+    @override
+    def parse_match_pattern(self, source: str) -> Query:
+        return self._match_pattern_cache.setdefault(source, self._query_parser.parse_match_pattern(source))
 
     @override
     def with_namespaces(self, namespaces: dict[str, str]) -> Self:

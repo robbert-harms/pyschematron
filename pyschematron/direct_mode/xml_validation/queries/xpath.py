@@ -69,6 +69,30 @@ class ElementPathXPathQueryParser(XPathQueryParser, metaclass=ABCMeta):
         xpath_token = self._parser.parse(source)
         return XPathQuery(xpath_token)
 
+    @override
+    def parse_match_pattern(self, source: str) -> Query:
+        """Parse a rule context into a query selecting every node matching it.
+
+        Each branch of a union is handled on its own. A relative branch such as `a/b` is prefixed with `//`, which
+        expands to `/descendant-or-self::node()/child::a/child::b`, and so selects every `b` with an `a` parent at any
+        depth. Predicates keep their match pattern semantics, e.g. `b[1]` still selects the first `b` child of every
+        parent. A branch starting at the root, a function call such as `id()`, or a variable already selects from the
+        whole document and is used unchanged.
+
+        Args:
+            source: the rule context
+
+        Returns:
+            A query selecting all the nodes matching the rule context, when evaluated from the document root.
+        """
+        branches = []
+        for branch in _get_union_operands(self._parser.parse(source)):
+            if _is_rooted_path(branch):
+                branches.append(branch.source)
+            else:
+                branches.append(f'//{branch.source}')
+        return self.parse(' | '.join(branches))
+
     def _get_elementpath_parser(self) -> XPath1Parser | XPath2Parser | XPath3Parser | XPath31Parser:
         """Get an elementpath parser using the defined namespaces and custom functions.
 
@@ -179,6 +203,38 @@ class XPathQuery(Query):
             xpath_context = context.get_xpath_context()
 
         return self._xpath_token.evaluate(xpath_context)
+
+
+def _get_union_operands(xpath_token: XPathToken) -> list[XPathToken]:
+    """Get the operands of a (possibly nested) union expression.
+
+    Args:
+        xpath_token: the parsed expression
+
+    Returns:
+        The operands of the union, or a list with just the token itself if it is not a union.
+    """
+    if xpath_token.symbol in ('|', 'union'):
+        return _get_union_operands(xpath_token[0]) + _get_union_operands(xpath_token[1])
+    return [xpath_token]
+
+
+def _is_rooted_path(xpath_token: XPathToken) -> bool:
+    """Check if the first step of a path already selects from the whole document.
+
+    This holds for paths starting with `/` or `//`, and for paths starting with a function call (such as `id()`)
+    or a variable.
+
+    Args:
+        xpath_token: the parsed path expression
+
+    Returns:
+        True if the path does not depend on the context item, False otherwise.
+    """
+    first_step = xpath_token
+    while first_step.symbol in ('/', '//', '[') and len(first_step) == 2:
+        first_step = first_step[0]
+    return first_step.symbol in ('/', '//', '$') or first_step.label == 'function'
 
 
 class XPath1QueryParser(ElementPathXPathQueryParser):
