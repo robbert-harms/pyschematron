@@ -1,4 +1,4 @@
-"""Tests for matching rule contexts to nodes."""
+"""Tests for matching rule contexts to nodes, and for evaluating the checks of a rule."""
 
 __author__ = 'Edward Jiang'
 __date__ = '2026-09-30'
@@ -73,3 +73,13 @@ def test_validator_reused_for_another_document():
     assert _failed_asserts(validator, '<other><a><b/><b/></a></other>') == [
         '/Q{}other[1]/Q{}a[1]/Q{}b[1]', '/Q{}other[1]/Q{}a[1]/Q{}b[2]']
 
+
+def test_checks_in_a_rule_do_not_share_the_context_item():
+    schema = _schema('<rule context="a">'
+                     '<assert test="exists(b/c)">first</assert>'
+                     '<assert test="exists(b/c)">second, identical test</assert>'
+                     '<assert test="b/c >= 0">third, compares a number</assert>'
+                     '</rule>')
+    validator = DirectModeSchematronValidatorFactory(schema).build()
+
+    assert _failed_asserts(validator, '<root><a><b><c>100</c></b></a></root>') == []

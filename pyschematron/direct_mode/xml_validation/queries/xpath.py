@@ -13,6 +13,7 @@ __maintainer__ = 'Robbert Harms'
 __email__ = 'robbert@xkls.nl'
 __licence__ = 'GPL v3'
 
+from copy import copy
 from typing import Any, Type, Self, override
 from abc import ABCMeta
 
@@ -200,7 +201,9 @@ class XPathQuery(Query):
     def evaluate(self, context: XPathEvaluationContext | None = None) -> Any:
         xpath_context = None
         if context:
-            xpath_context = context.get_xpath_context()
+            # elementpath moves the context item while evaluating a path, so evaluate on a copy to leave the shared
+            # context untouched for the next query.
+            xpath_context = copy(context.get_xpath_context())
 
         return self._xpath_token.evaluate(xpath_context)
 
