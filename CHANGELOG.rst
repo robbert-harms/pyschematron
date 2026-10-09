@@ -3,6 +3,15 @@ Changelog
 *********
 
 
+Version 1.2.3 (2026-10-09)
+==========================
+
+Other
+-----
+- Fixes issue #22 by iterating over all the parents of a node to check if a node matches. Using unit tests from edyiaeonian.
+
+
+
 Version 1.2.2 (2026-10-09)
 ==========================
 
