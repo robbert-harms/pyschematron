@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import copy
+
 """The XPath query bindings.
 
 This uses the adapter pattern around the elementpath library.
@@ -113,6 +115,9 @@ class XPathEvaluationContext(EvaluationContext):
 
         If no root node is set yet, we return None. Else, we return an XPathContext from the elementpath library.
 
+        This always provides a clean copy of the elementpath XPathContext object since elementpath moves the context
+        item while evaluating a path.
+
         Returns:
              The XPath context if a root node is set, else None.
 
@@ -121,7 +126,7 @@ class XPathEvaluationContext(EvaluationContext):
         """
         if self._xpath_context is None:
             raise MissingRootNodeError('Missing root node in XPath context, please set a root node first.')
-        return self._xpath_context
+        return copy.copy(self._xpath_context)
 
     @override
     def with_context_item(self, xml_item: ItemArgType) -> Self:

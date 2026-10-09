@@ -17,31 +17,19 @@ from pyschematron.direct_mode.xml_validation.results.svrl_builder import Default
 from pyschematron.direct_mode.xml_validation.validators import SimpleSchematronXMLValidator
 from pyschematron.utils import load_xml_document, load_schematron_xml
 
-
-
-from pathlib import Path
-from pyschematron import validate_document
 from lxml import etree
+from pyschematron.direct_mode.api import DirectModeSchematronValidatorFactory
 
-schematron_xml = load_schematron_xml(
-"""
-<schema
-    xmlns="http://purl.oclc.org/dsdl/schematron"
-    queryBinding="xslt2">
-<pattern>
-  <rule context="/*">
+schema = etree.ElementTree(etree.fromstring("""
+<schema xmlns="http://purl.oclc.org/dsdl/schematron" queryBinding="xslt2">
+  <pattern>
+    <rule context="a">
+      <assert id="X1" test="exists(b/c)">first</assert>
+      <assert id="X2" test="exists(b/c)">second, identical test</assert>
+    </rule>
+  </pattern>
+</schema>"""))
+doc = etree.ElementTree(etree.fromstring("<root><a><b><c/></b></a></root>"))
 
-    <report test="true()">
-      hello world
-    </report>
-
-    <assert id="dummy" test="true()">always true</assert>
-
-  </rule>
-</pattern>
-</schema>
-""")
-
-xml = etree.fromstring("<a/>")
-result = validate_document(xml, schematron_xml)
-print(etree.tostring(result.get_svrl(), pretty_print=True).decode('utf-8'))
+svrl = DirectModeSchematronValidatorFactory(schema).build().validate(doc).get_svrl().getroot()
+print([e.get("id") for e in svrl if etree.QName(e).localname == "failed-assert"])
