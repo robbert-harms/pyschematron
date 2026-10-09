@@ -3,6 +3,15 @@ Changelog
 *********
 
 
+Version 1.2.2 (2026-10-09)
+==========================
+
+Other
+-----
+- Fixes bug #23 with the help of code by edyiaeonian
+
+
+
 Version 1.2.1 (2026-07-06)
 ==========================
 
