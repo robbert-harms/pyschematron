@@ -13,7 +13,8 @@ from typing import Literal, Any
 from elementpath import TextNode, XPathNode
 from elementpath.tree_builders import get_node_tree
 from elementpath.xpath31 import XPath31Parser
-from elementpath.xpath_context import ItemArgType, XPathContext
+from elementpath.xpath_context import XPathContext
+from elementpath.aliases import ItemArgType
 from lxml.etree import ElementTree, tostring, _Element
 
 from pyschematron.direct_mode.schematron.ast import (Schema, ConcretePattern, ConcreteRule, Variable,

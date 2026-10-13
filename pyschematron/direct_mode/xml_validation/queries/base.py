@@ -8,8 +8,7 @@ __licence__ = 'GPL v3'
 
 from abc import ABCMeta, abstractmethod
 from typing import Any, Self, override, Callable
-from elementpath.tree_builders import RootArgType
-from elementpath.xpath_context import ItemArgType
+from elementpath.aliases import RootArgType, ItemArgType
 
 
 class QueryProcessor(metaclass=ABCMeta):

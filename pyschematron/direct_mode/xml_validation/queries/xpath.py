@@ -21,8 +21,7 @@ from abc import ABCMeta
 from elementpath import XPathToken, XPath1Parser, XPath2Parser, XPathContext
 from elementpath.xpath3 import XPath3Parser
 from elementpath.xpath31 import XPath31Parser
-from elementpath.xpath_context import ItemArgType
-from elementpath.tree_builders import RootArgType
+from elementpath.aliases import RootArgType, ItemArgType
 
 from pyschematron.direct_mode.xml_validation.queries.base import QueryParser, Query, EvaluationContext, \
     SimpleQueryProcessor, CustomQueryFunction, SimpleCustomQueryFunction

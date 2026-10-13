@@ -34,7 +34,13 @@ for ind in range(1):
 schema_str += """</schema>"""
 
 schema = etree.ElementTree(etree.fromstring(schema_str))
-doc = etree.ElementTree(etree.fromstring("<root><a><b/></a></root>"))
+
+docstr = """<root>"""
+for ind in range(1000):
+    docstr += """<a><b/></a>"""
+docstr += """</root>"""
+
+doc = etree.ElementTree(etree.fromstring(docstr))
 
 svrl = DirectModeSchematronValidatorFactory(schema).build().validate(doc).get_svrl().getroot()
 print([e.get("id") for e in svrl if etree.QName(e).localname == "failed-assert"])
