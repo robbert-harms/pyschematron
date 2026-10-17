@@ -214,7 +214,7 @@ class SchemaParser(ElementParser):
                 case Namespace():
                     builder.add_namespaces([include_node])
                 case Phase():
-                    builder.add_namespaces([include_node])
+                    builder.add_phases([include_node])
                 case Diagnostics():
                     builder.add_diagnostics([include_node])
                 case Properties():
@@ -261,7 +261,7 @@ class TitleParser(ElementParser):
     @override
     def parse(self, element: Element, context: ParsingContext | None = None) -> Title:
         context = context or ParsingContext()
-        return Title(content=''.join(self.get_rich_content(element, context)))
+        return Title(content=''.join(self.get_rich_content(element, context, parse_special=False)))
 
 
 class PhaseParser(ElementParser):
