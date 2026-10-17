@@ -3,6 +3,15 @@ Changelog
 *********
 
 
+Version 1.2.5 (2026-10-17)
+==========================
+
+Other
+-----
+- Fixes two small issues in the Schematron parser. Phases were not correctly added to the list of phases and the title parsing was improved in the case of mixed text and xml tag content.
+
+
+
 Version 1.2.4 (2026-10-13)
 ==========================
 
